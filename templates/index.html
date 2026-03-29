@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Medicine System</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<h2>💊 AI Medicine Recommendation System</h2>
+
+<form method="POST" enctype="multipart/form-data">
+
+    <h3>Enter Prescription</h3>
+    <textarea name="text_input" placeholder="Enter prescription..."></textarea>
+
+    <h3>OR Upload Image</h3>
+    <input type="file" name="image">
+
+    <br><br>
+    <button type="submit">Submit</button>
+
+</form>
+
+<h3>Result:</h3>
+
+{% if result %}
+<ul>
+    {% for item in result %}
+        <li>
+            <b>{{ item.name }}</b><br>
+            Category: {{ item.category }}<br>
+            Use: {{ item.uses }}<br>
+            Dosage: {{ item.dosage }}<br>
+            Side Effects: {{ item.side_effects }}
+        </li>
+        <br>
+    {% endfor %}
+</ul>
+{% else %}
+<p>No medicines detected</p>
+{% endif %}
+
+</body>
+</html>
