@@ -3,15 +3,10 @@ import pytesseract
 from PIL import Image
 import re
 
-# 🧠 AI Matching
 from difflib import get_close_matches
 from medicine_dataset import medicine_list, medicine_data
 
 app = Flask(__name__)
-
-# 🔴 Tesseract Path (uncomment if needed)
-# pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
 
 # 🧠 STEP 1: EXTRACT MEDICINES
 def extract_medicines(text):
@@ -27,14 +22,12 @@ def extract_medicines(text):
         lower = clean_line.lower()
         words = clean_line.split()
 
-        # Remove numbering
         if words and words[0].replace(".", "").isdigit():
             words = words[1:]
 
         if len(words) < 2:
             continue
 
-        # Ignore non-medical lines
         ignore = [
             "fever", "headache", "patient", "date", "reg", "timing",
             "follow", "outside", "business", "road", "pune"
@@ -42,7 +35,6 @@ def extract_medicines(text):
         if any(w in lower for w in ignore):
             continue
 
-        # Detect medicine
         is_medicine = False
 
         if any(k in lower for k in ["tab", "cap", "syr", "co."]):
@@ -54,7 +46,6 @@ def extract_medicines(text):
         if not is_medicine:
             continue
 
-        # Remove noise
         noise_words = ["morning", "night", "days", "food", "after", "pm", "am"]
         filtered = [w for w in words if w.lower() not in noise_words]
 
@@ -67,7 +58,7 @@ def extract_medicines(text):
     return list(dict.fromkeys(medicines))
 
 
-# 🧠 STEP 2: CORRECT MEDICINE NAMES
+# 🧠 STEP 2: CORRECT NAMES
 def correct_medicine_names(extracted):
     corrected = []
 
@@ -86,7 +77,7 @@ def correct_medicine_names(extracted):
     return list(dict.fromkeys(corrected))
 
 
-# 🧠 STEP 3: GET FULL DETAILS
+# 🧠 STEP 3: GET DETAILS
 def get_medicine_details(names):
     results = []
 
@@ -107,7 +98,6 @@ def index():
         text_input = request.form.get("text_input")
         file = request.files.get("image")
 
-        # 📷 IMAGE INPUT
         if file and file.filename != "":
             image = Image.open(file)
 
@@ -120,7 +110,6 @@ def index():
             corrected = correct_medicine_names(raw_meds)
             result = get_medicine_details(corrected)
 
-        # ✍️ TEXT INPUT
         elif text_input:
             raw_meds = extract_medicines(text_input)
             corrected = correct_medicine_names(raw_meds)

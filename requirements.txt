@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 Flask
 pytesseract
 Pillow
+=======
+Flask
+pytesseract
+Pillow
+>>>>>>> b5dd931357a56bcf1997a9a8b5c7e8235edb6f1d
 gunicorn

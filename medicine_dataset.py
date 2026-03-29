@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 medicine_data = [
 
 # 🔴 PAINKILLERS / FEVER
@@ -79,3 +80,17 @@ medicine_data = [
 ]
 
 medicine_list = [m["name"] for m in medicine_data]
+=======
+medicine_list = [
+    "ABCIXIMAB",
+    "VOMILAST",
+    "ZOCLAR 500",
+    "GESTAKIND 10 SR",
+    "PARACETAMOL 500",
+    "AZITHROMYCIN",
+    "DOLO 650",
+    "CROCIN",
+    "AUGMENTIN 625",
+    "PANTOP 40"
+]
+>>>>>>> b5dd931357a56bcf1997a9a8b5c7e8235edb6f1d
