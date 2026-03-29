@@ -8,7 +8,7 @@ from medicine_dataset import medicine_list, medicine_data
 
 app = Flask(__name__)
 
-# 🧠 STEP 1: EXTRACT MEDICINES
+# 🧠 STEP 1: EXTRACT MEDICINES (for OCR)
 def extract_medicines(text):
     lines = text.split("\n")
     medicines = []
@@ -16,68 +16,48 @@ def extract_medicines(text):
     for line in lines:
         clean_line = re.sub(r'[^a-zA-Z0-9 ./]', '', line).strip()
 
-        if len(clean_line) < 5:
+        if len(clean_line) < 3:
             continue
 
-        lower = clean_line.lower()
         words = clean_line.split()
 
         if words and words[0].replace(".", "").isdigit():
             words = words[1:]
 
-        if len(words) < 2:
+        if len(words) < 1:
             continue
 
-        ignore = [
-            "fever", "headache", "patient", "date", "reg", "timing",
-            "follow", "outside", "business", "road", "pune"
-        ]
-        if any(w in lower for w in ignore):
-            continue
-
-        is_medicine = False
-
-        if any(k in lower for k in ["tab", "cap", "syr", "co."]):
-            is_medicine = True
-
-        if any(char.isdigit() for char in clean_line):
-            is_medicine = True
-
-        if not is_medicine:
-            continue
-
-        noise_words = ["morning", "night", "days", "food", "after", "pm", "am"]
-        filtered = [w for w in words if w.lower() not in noise_words]
-
-        if len(filtered) < 2:
-            continue
-
-        med = " ".join(filtered[:3])
+        med = " ".join(words[:3])
         medicines.append(med)
 
     return list(dict.fromkeys(medicines))
 
 
-# 🧠 STEP 2: CORRECT NAMES
+# 🧠 STEP 2: CORRECT NAMES + SUGGESTIONS
 def correct_medicine_names(extracted):
     corrected = []
+    suggestions = []
 
     for med in extracted:
         med_upper = med.upper()
 
-        match = get_close_matches(med_upper, medicine_list, n=1, cutoff=0.6)
+        # ✅ Exact match
+        if med_upper in medicine_list:
+            corrected.append(med_upper)
+        else:
+            # 🔥 Fuzzy match (handles typos)
+            matches = get_close_matches(med_upper, medicine_list, n=3, cutoff=0.4)
 
-        if not match:
-            if any(char.isdigit() for char in med_upper) or len(med_upper) > 6:
-                match = get_close_matches(med_upper, medicine_list, n=1, cutoff=0.45)
+            if matches:
+                corrected.append(matches[0])
+                suggestions.append(f"{med} → {matches[0]}")
+            else:
+                suggestions.append(f"{med} → Not Found")
 
-        if match:
-            corrected.append(match[0])
-
-    return list(dict.fromkeys(corrected))
+    return list(dict.fromkeys(corrected)), suggestions
 
 
-# 🧠 STEP 3: GET DETAILS
+# 🧠 STEP 3: GET FULL DETAILS
 def get_medicine_details(names):
     results = []
 
@@ -93,11 +73,13 @@ def get_medicine_details(names):
 @app.route("/", methods=["GET", "POST"])
 def index():
     result = []
+    suggestions = []
 
     if request.method == "POST":
         text_input = request.form.get("text_input")
         file = request.files.get("image")
 
+        # 📷 IMAGE INPUT
         if file and file.filename != "":
             image = Image.open(file)
 
@@ -107,15 +89,25 @@ def index():
                 text = ""
 
             raw_meds = extract_medicines(text)
-            corrected = correct_medicine_names(raw_meds)
-            result = get_medicine_details(corrected)
 
+        # ✍️ TEXT INPUT (IMPORTANT FIX)
         elif text_input:
-            raw_meds = extract_medicines(text_input)
-            corrected = correct_medicine_names(raw_meds)
-            result = get_medicine_details(corrected)
+            raw_meds = [
+                line.strip().upper()
+                for line in text_input.split("\n")
+                if line.strip()
+            ]
 
-    return render_template("index.html", result=result)
+        else:
+            raw_meds = []
+
+        # 🔥 CORRECTION + SUGGESTIONS
+        corrected, suggestions = correct_medicine_names(raw_meds)
+
+        # 🔥 FULL DETAILS
+        result = get_medicine_details(corrected)
+
+    return render_template("index.html", result=result, suggestions=suggestions)
 
 
 if __name__ == "__main__":

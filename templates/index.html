@@ -11,7 +11,7 @@
 <form method="POST" enctype="multipart/form-data">
 
     <h3>Enter Prescription</h3>
-    <textarea name="text_input" placeholder="Enter prescription..."></textarea>
+    <textarea name="text_input" placeholder="Enter medicines (one per line)..."></textarea>
 
     <h3>OR Upload Image</h3>
     <input type="file" name="image">
@@ -38,6 +38,16 @@
 </ul>
 {% else %}
 <p>No medicines detected</p>
+{% endif %}
+
+<!-- 🔥 NEW: Suggestions Section -->
+{% if suggestions %}
+<h4>Suggestions:</h4>
+<ul>
+    {% for s in suggestions %}
+        <li>{{ s }}</li>
+    {% endfor %}
+</ul>
 {% endif %}
 
 </body>
