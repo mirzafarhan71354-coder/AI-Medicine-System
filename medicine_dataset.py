@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 medicine_data = [
 
 # 🔴 PAINKILLERS / FEVER
@@ -23,7 +22,7 @@ medicine_data = [
 {"name": "ZIFI 200", "uses": "Infection", "dosage": "200 mg", "type": "Tablet", "side_effects": "Diarrhea", "category": "Antibiotic"},
 {"name": "NORFLOX TZ", "uses": "Diarrhea, Infection", "dosage": "As prescribed", "type": "Tablet", "side_effects": "Nausea", "category": "Antibiotic"},
 {"name": "AMOXICILLIN", "uses": "Infection", "dosage": "500 mg", "type": "Capsule", "side_effects": "Rash", "category": "Antibiotic"},
-{"name": "AUGMENTIN", "uses": "Infection", "dosage": "625 mg", "type": "Tablet", "side_effects": "Diarrhea", "category": "Antibiotic"},
+{"name": "AUGMENTIN 625", "uses": "Infection", "dosage": "625 mg", "type": "Tablet", "side_effects": "Diarrhea", "category": "Antibiotic"},
 {"name": "CIPROFLOXACIN", "uses": "Infection", "dosage": "500 mg", "type": "Tablet", "side_effects": "Nausea", "category": "Antibiotic"},
 {"name": "OFLOXACIN", "uses": "Infection", "dosage": "200 mg", "type": "Tablet", "side_effects": "Dizziness", "category": "Antibiotic"},
 {"name": "METRONIDAZOLE", "uses": "Infection", "dosage": "400 mg", "type": "Tablet", "side_effects": "Metallic taste", "category": "Antibiotic"},
@@ -49,23 +48,19 @@ medicine_data = [
 {"name": "RABEZ DSR", "uses": "Acidity", "dosage": "As prescribed", "type": "Capsule", "side_effects": "Nausea", "category": "Antacid"},
 {"name": "RANTAC 150", "uses": "Acidity", "dosage": "150 mg", "type": "Tablet", "side_effects": "Headache", "category": "Antacid"},
 {"name": "DIGEINE", "uses": "Acidity", "dosage": "As needed", "type": "Liquid", "side_effects": "Constipation", "category": "Antacid"},
-{"name": "ESOMEPRAZOLE", "uses": "Acidity", "dosage": "40 mg", "type": "Capsule", "side_effects": "Headache", "category": "Antacid"},
-{"name": "DOMPERIDONE", "uses": "Vomiting", "dosage": "10 mg", "type": "Tablet", "side_effects": "Dry mouth", "category": "Antacid"},
-{"name": "LANSOPRAZOLE", "uses": "Acidity", "dosage": "30 mg", "type": "Capsule", "side_effects": "Headache", "category": "Antacid"},
 
-# 🟣 DIARRHEA / STOMACH
+# 🟣 DIARRHEA
 {"name": "LOMOFIN PLUS", "uses": "Diarrhea", "dosage": "As prescribed", "type": "Tablet", "side_effects": "Constipation", "category": "Antidiarrheal"},
 {"name": "ELDOPER", "uses": "Diarrhea", "dosage": "As prescribed", "type": "Capsule", "side_effects": "Constipation", "category": "Antidiarrheal"},
 {"name": "ANDIAL", "uses": "Diarrhea", "dosage": "As prescribed", "type": "Tablet", "side_effects": "Constipation", "category": "Antidiarrheal"},
 
-# 🟠 MUSCLE / PAIN
+# 🟠 MUSCLE
 {"name": "ZERODOL", "uses": "Pain", "dosage": "As prescribed", "type": "Tablet", "side_effects": "Stomach pain", "category": "Painkiller"},
 {"name": "ZERODOL P", "uses": "Pain", "dosage": "As prescribed", "type": "Tablet", "side_effects": "Nausea", "category": "Painkiller"},
 {"name": "ZERODOL SP", "uses": "Pain", "dosage": "As prescribed", "type": "Tablet", "side_effects": "Dizziness", "category": "Painkiller"},
-{"name": "ZERODOL MR", "uses": "Muscle pain", "dosage": "As prescribed", "type": "Tablet", "side_effects": "Sleepiness", "category": "Muscle Relaxant"},
 {"name": "FLEXON MR", "uses": "Muscle pain", "dosage": "As prescribed", "type": "Tablet", "side_effects": "Drowsiness", "category": "Muscle Relaxant"},
 
-# 🟤 LAXATIVES
+# 🟤 LAXATIVE
 {"name": "CREMAFIN", "uses": "Constipation", "dosage": "As needed", "type": "Syrup", "side_effects": "Loose motion", "category": "Laxative"},
 {"name": "SOFTOVAC", "uses": "Constipation", "dosage": "As needed", "type": "Powder", "side_effects": "Gas", "category": "Laxative"},
 {"name": "EASYLAX", "uses": "Constipation", "dosage": "As needed", "type": "Tablet", "side_effects": "Cramps", "category": "Laxative"},
@@ -74,23 +69,8 @@ medicine_data = [
 {"name": "ZINCOVIT", "uses": "Vitamin supplement", "dosage": "Daily", "type": "Tablet", "side_effects": "Rare", "category": "Supplement"},
 {"name": "BECOSULES", "uses": "Vitamin deficiency", "dosage": "Daily", "type": "Capsule", "side_effects": "Rare", "category": "Supplement"},
 {"name": "VITAMIN D3", "uses": "Bone health", "dosage": "Weekly", "type": "Capsule", "side_effects": "Rare", "category": "Supplement"},
-{"name": "FERROUS SULFATE", "uses": "Iron deficiency", "dosage": "Daily", "type": "Tablet", "side_effects": "Constipation", "category": "Supplement"},
+{"name": "FERROUS SULFATE", "uses": "Iron deficiency", "dosage": "Daily", "type": "Tablet", "side_effects": "Constipation", "category": "Supplement"}
 
-# 🔹 IMPORTANT
 ]
 
 medicine_list = [m["name"] for m in medicine_data]
-=======
-medicine_list = [
-    "ABCIXIMAB",
-    "VOMILAST",
-    "ZOCLAR 500",
-    "GESTAKIND 10 SR",
-    "PARACETAMOL 500",
-    "AZITHROMYCIN",
-    "DOLO 650",
-    "CROCIN",
-    "AUGMENTIN 625",
-    "PANTOP 40"
-]
->>>>>>> b5dd931357a56bcf1997a9a8b5c7e8235edb6f1d
