@@ -3,18 +3,16 @@ import pytesseract
 from PIL import Image
 import re
 import requests
-
 from difflib import get_close_matches
 from medicine_dataset import medicine_list, medicine_data
-
-from api_service import fetch_medicine_from_api
+from drug_interactions import drug_interactions   # ✅ NEW
 
 app = Flask(__name__)
 
 # 🔥 API CACHE
 api_cache = {}
 
-# 🔥 CLEAN TEXT FUNCTION (shortens long API responses)
+# 🔥 CLEAN TEXT FUNCTION
 def clean_text(text, max_length=200):
     if not text:
         return "Not available"
@@ -35,7 +33,7 @@ def fetch_medicine_from_api(name):
             "limit": 1
         }
 
-        res = requests.get(url, params=params)
+        res = requests.get(url, params=params, timeout=3)
 
         if res.status_code == 200:
             data = res.json()
@@ -46,7 +44,7 @@ def fetch_medicine_from_api(name):
                 result = {
                     "name": name,
                     "category": "General",
-                    "uses": clean_text(r.get("purpose", ["Not available"])[0], 100),
+                    "usage": clean_text(r.get("purpose", ["Not available"])[0], 100),
                     "dosage": clean_text(r.get("dosage_and_administration", ["Not available"])[0], 150),
                     "side_effects": clean_text(r.get("warnings", ["Not available"])[0], 200),
                     "source": "API"
@@ -61,7 +59,7 @@ def fetch_medicine_from_api(name):
     return None
 
 
-# 🧠 STEP 1: EXTRACT MEDICINES (OCR)
+# 🧠 EXTRACT MEDICINES
 def extract_medicines(text):
     lines = text.split("\n")
     medicines = []
@@ -86,7 +84,7 @@ def extract_medicines(text):
     return list(dict.fromkeys(medicines))
 
 
-# 🧠 STEP 2: CORRECT NAMES (IMPROVED)
+# 🧠 CORRECT NAMES
 def correct_medicine_names(extracted):
     corrected = []
     suggestions = []
@@ -109,14 +107,14 @@ def correct_medicine_names(extracted):
     return list(dict.fromkeys(corrected)), suggestions
 
 
-# 🧠 STEP 3: GET DETAILS (LOCAL + API)
+# 🧠 GET DETAILS (LOCAL + API)
 def get_medicine_details(names):
     results = []
 
     for name in names:
         found = False
 
-        # ✅ LOCAL SEARCH
+        # LOCAL SEARCH
         for med in medicine_data:
             if med["name"] == name:
                 med_copy = med.copy()
@@ -125,7 +123,7 @@ def get_medicine_details(names):
                 found = True
                 break
 
-        # 🔥 API FALLBACK
+        # API FALLBACK
         if not found:
             api_data = fetch_medicine_from_api(name)
 
@@ -135,45 +133,81 @@ def get_medicine_details(names):
     return results
 
 
-# 🌐 MAIN ROUTE
-@app.route("/", methods=["GET", "POST"])
-def index():
+# 🚨 NEW: DRUG INTERACTION CHECKER
+def check_interactions(medicine_names):
+    interactions_found = []
+
+    for i in range(len(medicine_names)):
+        for j in range(i + 1, len(medicine_names)):
+
+            pair = (medicine_names[i], medicine_names[j])
+            reverse_pair = (medicine_names[j], medicine_names[i])
+
+            if pair in drug_interactions:
+                interactions_found.append(
+                    f"{pair[0]} + {pair[1]} → {drug_interactions[pair]}"
+                )
+            elif reverse_pair in drug_interactions:
+                interactions_found.append(
+                    f"{reverse_pair[0]} + {reverse_pair[1]} → {drug_interactions[reverse_pair]}"
+                )
+
+    return interactions_found
+
+
+# 🌐 HOME PAGE
+@app.route("/")
+def home():
+    return render_template("index.html", result=[], suggestions=[], interactions=[])
+
+
+# 🔥 PROCESS ROUTE
+@app.route("/process", methods=["POST"])
+def process():
     result = []
     suggestions = []
+    interactions = []   # ✅ NEW
 
-    if request.method == "POST":
-        text_input = request.form.get("text_input")
-        file = request.files.get("image")
+    text_input = request.form.get("text_input")
+    file = request.files.get("image")
 
-        # 📷 IMAGE INPUT
-        if file and file.filename != "":
-            image = Image.open(file)
+    # IMAGE INPUT
+    if file and file.filename != "":
+        image = Image.open(file)
 
-            try:
-                text = pytesseract.image_to_string(image)
-            except:
-                text = ""
+        try:
+            text = pytesseract.image_to_string(image)
+        except:
+            text = ""
 
-            raw_meds = extract_medicines(text)
+        raw_meds = extract_medicines(text)
 
-        # ✍️ TEXT INPUT
-        elif text_input:
-            raw_meds = [
-                line.strip().upper()
-                for line in text_input.split("\n")
-                if line.strip()
-            ]
+    # TEXT INPUT
+    elif text_input:
+        raw_meds = [
+            line.strip().upper()
+            for line in text_input.split("\n")
+            if line.strip()
+        ]
 
-        else:
-            raw_meds = []
+    else:
+        raw_meds = []
 
-        # 🔥 CORRECTION + SUGGESTIONS
-        corrected, suggestions = correct_medicine_names(raw_meds)
+    # CORRECTION
+    corrected, suggestions = correct_medicine_names(raw_meds)
 
-        # 🔥 GET RESULTS
-        result = get_medicine_details(corrected)
+    # GET DETAILS
+    result = get_medicine_details(corrected)
 
-    return render_template("index.html", result=result, suggestions=suggestions)
+    # 🚨 CHECK INTERACTIONS
+    interactions = check_interactions(corrected)
+
+    return render_template(
+        "index.html",
+        result=result,
+        suggestions=suggestions,
+        interactions=interactions
+    )
 
 
 if __name__ == "__main__":

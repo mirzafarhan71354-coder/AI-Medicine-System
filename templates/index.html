@@ -1,55 +1,98 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AI Medicine System</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <title>AI Medicine Recommendation System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
 
-<h2>💊 AI Medicine Recommendation System</h2>
+<div class="container">
 
-<form method="POST" enctype="multipart/form-data">
+    <h1>💊 AI Medicine Recommendation System</h1>
 
-    <h3>Enter Prescription</h3>
-    <textarea name="text_input" placeholder="Enter medicines (one per line)..."></textarea>
+    <!-- INPUT SECTION -->
+    <div class="card">
+        <form action="/process" method="POST" enctype="multipart/form-data">
 
-    <h3>OR Upload Image</h3>
-    <input type="file" name="image">
+            <label>Enter Medicines:</label>
+            <textarea name="text_input" placeholder="Enter medicines (one per line)..."></textarea>
 
-    <br><br>
-    <button type="submit">Submit</button>
+            <p class="or">OR</p>
 
-</form>
+            <label>Upload Prescription Image:</label>
+            <input type="file" name="image">
 
-<h3>Result:</h3>
+            <!-- BUTTONS -->
+            <button type="submit">🔍 Analyze</button>
+            <button type="reset">❌ Clear</button>
 
-{% if result %}
-<ul>
-    {% for item in result %}
-        <li>
-            <b>{{ item.name }}</b><br>
-            Category: {{ item.category }}<br>
-            Use: {{ item.uses }}<br>
-            Dosage: {{ item.dosage }}<br>
-            Side Effects: {{ item.side_effects }}
-            Source: {{ item.source }}<br>
-        </li>
-        <br>
-    {% endfor %}
-</ul>
-{% else %}
-<p>No medicines detected</p>
-{% endif %}
+        </form>
+    </div>
 
-<!-- 🔥 NEW: Suggestions Section -->
-{% if suggestions %}
-<h4>Suggestions:</h4>
-<ul>
-    {% for s in suggestions %}
-        <li>{{ s }}</li>
-    {% endfor %}
-</ul>
-{% endif %}
+    <!-- RESULTS -->
+    {% if result %}
+    <div class="results">
+        <h2>📊 Results</h2>
+
+        {% for med in result %}
+        <div class="result-card">
+
+            <h3>{{ med.name }}</h3>
+
+            <!-- SOURCE BADGE -->
+            {% if med.source == "Local" %}
+                <span class="badge local">🟢 Local Dataset</span>
+            {% elif med.source == "API" %}
+                <span class="badge api">🔵 OpenFDA API</span>
+            {% endif %}
+
+            <hr>
+
+            <p><b>Category:</b> {{ med.category or "General" }}</p>
+            <p><b>Use:</b> {{ med.usage or "Not Available" }}</p>
+            <p><b>Dosage:</b> {{ med.dosage or "Not Available" }}</p>
+            <p><b>Side Effects:</b> {{ med.side_effects or "Not Available" }}</p>
+
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- SUGGESTIONS -->
+    {% if suggestions %}
+    <div class="results">
+        <h2>💡 Suggestions</h2>
+
+        <div class="card">
+            {% for s in suggestions %}
+                <p>{{ s }}</p>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 🚨 DRUG INTERACTIONS (FIXED POSITION) -->
+    {% if interactions %}
+    <div class="results">
+        <h2>⚠️ Drug Interactions</h2>
+
+        <div class="card">
+            {% for i in interactions %}
+                <p style="color:red; font-weight:bold;">
+                    🚨 {{ i }}
+                </p>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- FOOTER -->
+    <div style="margin-top:20px; text-align:center; color:gray;">
+        🚀 AI-Powered Medicine Analyzer
+    </div>
+
+</div>
 
 </body>
 </html>
