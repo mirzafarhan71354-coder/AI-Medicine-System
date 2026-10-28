@@ -1,0 +1,18 @@
+{
+  "name": "CarePoint Medicine Reminders",
+  "short_name": "CarePoint",
+  "description": "Private medicine reminders and tablet inventory tracking.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f7f3",
+  "theme_color": "#176c58",
+  "icons": [
+    {
+      "src": "/static/carepoint-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

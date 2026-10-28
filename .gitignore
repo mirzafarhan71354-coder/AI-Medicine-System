@@ -1,0 +1,11 @@
+**pycache**/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+.pytest_cache/
+data/carepoint.sqlite3
+__pycache__/
+*.py[cod]

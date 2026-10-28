@@ -1,3 +1,9 @@
+import json
+import re
+import sqlite3
+from pathlib import Path
+
+
 medicine_data = [
 
 # 🔴 PAINKILLERS / FEVER (25)
@@ -81,3 +87,119 @@ medicine_data = [
 ]
 
 medicine_list = [m["name"] for m in medicine_data]
+
+_CATALOG_PATH = Path(__file__).resolve().parent / "data" / "medicine_catalog.sqlite3"
+
+
+def _normalize_name(value):
+    return re.sub(r"[^a-z0-9]", "", str(value or "").lower())
+
+
+def search_medicines(query, limit=5):
+    """Search the legacy references and the downloaded FDA NDC snapshot."""
+    normalized = _normalize_name(query)
+    if len(normalized) < 2:
+        return []
+
+    local_matches = []
+    for medicine in medicine_data:
+        searchable = " ".join(str(medicine.get(key, "")) for key in (
+            "name", "generic_name", "brand_name", "active_ingredients",
+            "aliases", "alternative_names"
+        ))
+        if normalized in _normalize_name(searchable):
+            match = medicine.copy()
+            match["source"] = "Legacy project data (unverified)"
+            match["verification_status"] = (
+                "Carried over from the project; no source verification is recorded."
+            )
+            match["_rank"] = (
+                0 if normalized == _normalize_name(medicine.get("name"))
+                else 1 if _normalize_name(medicine.get("name")).startswith(normalized)
+                else 2
+            )
+            local_matches.append(match)
+
+    catalog_matches = []
+    if _CATALOG_PATH.is_file():
+        pattern = f"%{normalized}%"
+        raw_query = str(query).strip().casefold()
+        with sqlite3.connect(_CATALOG_PATH) as connection:
+            rows = connection.execute(
+                """
+                SELECT product_id, product_ndc, name, brand_name, brand_name_base,
+                       generic_name, active_ingredients, strength, dosage_form,
+                       manufacturer, category, product_type, route, aliases
+                FROM medicines
+                WHERE search_text LIKE ?
+                ORDER BY
+                    CASE
+                        WHEN lower(name) = ? THEN 0
+                        WHEN lower(brand_name) = ? THEN 1
+                        WHEN lower(generic_name) = ? THEN 2
+                        WHEN lower(name) LIKE ? THEN 3
+                        WHEN lower(brand_name) LIKE ? THEN 4
+                        WHEN lower(generic_name) LIKE ? THEN 5
+                        ELSE 6
+                    END,
+                    name, strength, dosage_form
+                LIMIT ?
+                """,
+                (
+                    pattern, raw_query, raw_query, raw_query,
+                    f"{raw_query}%", f"{raw_query}%", f"{raw_query}%",
+                    limit,
+                ),
+            ).fetchall()
+
+        for row in rows:
+            (
+                product_id, product_ndc, name, brand_name, brand_name_base,
+                generic_name, active_ingredients, strength, dosage_form,
+                manufacturer, category, product_type, route, aliases,
+            ) = row
+            catalog_matches.append({
+                "name": name,
+                "brand_name": brand_name,
+                "brand_name_base": brand_name_base,
+                "generic_name": generic_name,
+                "active_ingredients": active_ingredients,
+                "strength": strength,
+                "type": dosage_form,
+                "dosage_form": dosage_form,
+                "manufacturer": manufacturer,
+                "category": category or "Not listed in the NDC record",
+                "usage": "Not provided in the FDA NDC Directory.",
+                "dosage": "See the current product label; dosing instructions are not in the NDC Directory.",
+                "side_effects": "Not provided in the FDA NDC Directory.",
+                "product_type": product_type,
+                "route": route,
+                "product_ndc": product_ndc,
+                "product_id": product_id,
+                "aliases": json.loads(aliases or "[]"),
+                "source": "FDA NDC Directory (US listing)",
+                "verification_status": (
+                    "Product listing fields are from the FDA NDC Directory; "
+                    "this listing does not establish availability in India."
+                ),
+                "_rank": (
+                    3 if normalized == _normalize_name(name)
+                    else 4 if normalized == _normalize_name(brand_name)
+                    else 5 if normalized == _normalize_name(generic_name)
+                    else 6
+                ),
+            })
+
+    matches = sorted(local_matches + catalog_matches, key=lambda item: item["_rank"])
+    results = []
+    seen = set()
+    for match in matches:
+        key = match.get("product_id") or f"legacy:{_normalize_name(match['name'])}"
+        if key in seen:
+            continue
+        seen.add(key)
+        match.pop("_rank", None)
+        results.append(match)
+        if len(results) == limit:
+            break
+    return results

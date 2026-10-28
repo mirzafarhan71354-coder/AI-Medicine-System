@@ -1,98 +1,281 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>AI Medicine Recommendation System</title>
+    <meta charset="UTF-8">
+    <title>CarePoint | Health tools</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body>
-
-<div class="container">
-
-    <h1>💊 AI Medicine Recommendation System</h1>
-
-    <!-- INPUT SECTION -->
-    <div class="card">
-        <form action="/process" method="POST" enctype="multipart/form-data">
-
-            <label>Enter Medicines:</label>
-            <textarea name="text_input" placeholder="Enter medicines (one per line)..."></textarea>
-
-            <p class="or">OR</p>
-
-            <label>Upload Prescription Image:</label>
-            <input type="file" name="image">
-
-            <!-- BUTTONS -->
-            <button type="submit">🔍 Analyze</button>
-            <button type="reset">❌ Clear</button>
-
-        </form>
-    </div>
-
-    <!-- RESULTS -->
-    {% if result %}
-    <div class="results">
-        <h2>📊 Results</h2>
-
-        {% for med in result %}
-        <div class="result-card">
-
-            <h3>{{ med.name }}</h3>
-
-            <!-- SOURCE BADGE -->
-            {% if med.source == "Local" %}
-                <span class="badge local">🟢 Local Dataset</span>
-            {% elif med.source == "API" %}
-                <span class="badge api">🔵 OpenFDA API</span>
+<main class="page-shell">
+    <header class="topbar">
+        <a class="brand" href="{{ url_for('tools') }}"><span class="brand-mark">+</span> carepoint</a>
+        <nav class="account-nav" aria-label="Account">
+            {% if current_user %}
+            <a href="{{ url_for('accounts.dashboard') }}">Personal medicine tracker</a>
+            <a href="{{ url_for('accounts.profile') }}">Profile</a>
+            <form action="{{ url_for('accounts.logout') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Sign out</button>
+            </form>
+            {% else %}
+            <a href="{{ url_for('accounts.login') }}">Sign in</a>
+            <a class="account-primary" href="{{ url_for('accounts.register') }}">Create account</a>
             {% endif %}
+        </nav>
+    </header>
 
-            <hr>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}<div class="flash-list" role="status">{% for category, message in messages %}<p class="flash-message {{ category }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% endwith %}
 
-            <p><b>Category:</b> {{ med.category or "General" }}</p>
-            <p><b>Use:</b> {{ med.usage or "Not Available" }}</p>
-            <p><b>Dosage:</b> {{ med.dosage or "Not Available" }}</p>
-            <p><b>Side Effects:</b> {{ med.side_effects or "Not Available" }}</p>
-
+    <section class="welcome">
+        <div class="welcome-copy">
+            <p class="eyebrow">YOUR HEALTH, IN ONE PLACE</p>
+            <h1>What can we<br>help you with?</h1>
+            <p class="welcome-text">Choose a tool to get started. Share what you need, and we’ll help you find the next step.</p>
         </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- SUGGESTIONS -->
-    {% if suggestions %}
-    <div class="results">
-        <h2>💡 Suggestions</h2>
-
-        <div class="card">
-            {% for s in suggestions %}
-                <p>{{ s }}</p>
-            {% endfor %}
+        <div class="welcome-art" aria-hidden="true">
+            <div class="art-ring ring-one"></div>
+            <div class="art-ring ring-two"></div>
+            <div class="art-cross">+</div>
+            <span class="art-dot dot-one"></span><span class="art-dot dot-two"></span>
         </div>
-    </div>
-    {% endif %}
+    </section>
 
-    <!-- 🚨 DRUG INTERACTIONS (FIXED POSITION) -->
-    {% if interactions %}
-    <div class="results">
-        <h2>⚠️ Drug Interactions</h2>
+    <section class="tool-grid" aria-label="Health tools">
+        <button class="tool-card symptom-card {% if active_tool == 'symptoms' %}selected{% endif %}" type="button" data-tool="symptoms" aria-expanded="{{ 'true' if active_tool == 'symptoms' else 'false' }}">
+            <span class="tool-icon symptom-icon" aria-hidden="true">✳</span>
+            <span class="tool-title">Symptoms checker</span>
+            <span class="tool-description">Explore possible causes based on how you feel.</span>
+            <span class="tool-action">Check symptoms <span aria-hidden="true">→</span></span>
+        </button>
+        <button class="tool-card medicine-card {% if active_tool == 'medicines' %}selected{% endif %}" type="button" data-tool="medicines" aria-expanded="{{ 'true' if active_tool == 'medicines' else 'false' }}">
+            <span class="tool-icon medicine-icon" aria-hidden="true">＋</span>
+            <span class="tool-title">Medicines analyzer</span>
+            <span class="tool-description">Look up medicine details and possible interactions.</span>
+            <span class="tool-action">Analyze medicines <span aria-hidden="true">→</span></span>
+        </button>
+        <button class="tool-card hospital-card {% if active_tool == 'hospitals' %}selected{% endif %}" type="button" data-tool="hospitals" aria-expanded="{{ 'true' if active_tool == 'hospitals' else 'false' }}">
+            <span class="tool-icon hospital-icon" aria-hidden="true">⌖</span>
+            <span class="tool-title">Nearby hospitals</span>
+            <span class="tool-description">Find hospitals around a city or address.</span>
+            <span class="tool-action">Find a hospital <span aria-hidden="true">→</span></span>
+        </button>
+        <a class="tool-card tracker-card" href="{{ url_for('accounts.dashboard') }}">
+            <span class="tool-icon tracker-icon" aria-hidden="true">✓</span>
+            <span class="tool-title">Personal medicine tracker</span>
+            <span class="tool-description">Manage your medicines, reminders, and tablet inventory.</span>
+            <span class="tool-action">Open your tracker <span aria-hidden="true">→</span></span>
+        </a>
+        <a class="tool-card doctor-assistance-card" href="{{ url_for('doctor_assistance') }}">
+            <span class="tool-icon doctor-assistance-icon" aria-hidden="true">✚</span>
+            <span class="tool-title">Doctor Assistance</span>
+            <span class="tool-description">Choose a specialty and chat with an AI medical information assistant.</span>
+            <span class="tool-action">Meet your assistant <span aria-hidden="true">→</span></span>
+        </a>
+    </section>
 
-        <div class="card">
-            {% for i in interactions %}
-                <p style="color:red; font-weight:bold;">
-                    🚨 {{ i }}
-                </p>
-            {% endfor %}
+    <section class="tool-panel {% if active_tool != 'symptoms' %}is-hidden{% endif %}" id="panel-symptoms" aria-labelledby="symptoms-heading">
+        <div class="panel-heading">
+            <div><p class="eyebrow">FICTIONAL-DATA DEMO</p><h2 id="symptoms-heading">Describe the symptoms</h2></div>
+            <button class="new-assessment" id="newAssessment" type="button" title="Clear this conversation and start over">New assessment</button>
         </div>
-    </div>
-    {% endif %}
+        <div class="chat-shell">
+            <form class="assessment-setup" id="assessmentSetup">
+                <label class="consent-label"><input id="demoConfirmation" type="checkbox" required> Fictional demo only. Messages are matched locally against a limited reference dataset, not sent to an AI provider. Do not enter real symptoms, names, or personal information.</label>
+            </form>
+            <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-relevant="additions">
+                <article class="chat-turn assistant">
+                    <span class="chat-avatar" aria-hidden="true">C</span>
+                    <div class="chat-bubble"><p>Hi. Describe a fictional symptom scenario. Your message is matched locally against the limited symptoms.csv reference list. Entries may show associated conditions and medicines, but they are examples only—not diagnoses or treatment advice.</p></div>
+                </article>
+            </div>
+            <form class="chat-composer" id="chatForm">
+                <label class="sr-only" for="chatInput">Describe a fictional symptom scenario</label>
+                <textarea id="chatInput" name="message" rows="2" maxlength="2048" placeholder="Describe a fictional symptom scenario..." required></textarea>
+                <button type="submit" aria-label="Send message"><span aria-hidden="true">↑</span></button>
+            </form>
+            <p class="chat-disclaimer">Messages are matched locally against symptoms.csv and are not sent to a symptom service. The list is limited and may be incomplete or inaccurate; condition and medicine entries are not diagnoses or recommendations. Do not start or change medicines based on this demo. For real symptoms, contact a healthcare professional; for emergencies, contact local emergency services.</p>
+        </div>
+    </section>
 
-    <!-- FOOTER -->
-    <div style="margin-top:20px; text-align:center; color:gray;">
-        🚀 AI-Powered Medicine Analyzer
-    </div>
+    <section class="tool-panel {% if active_tool != 'medicines' %}is-hidden{% endif %}" id="panel-medicines" aria-labelledby="medicines-heading">
+        <div class="panel-heading"><div><p class="eyebrow">MEDICINES ANALYZER</p><h2 id="medicines-heading">Review your medicines</h2></div><span class="panel-step">02 / 05</span></div>
+        <form action="{{ url_for('process') }}" method="POST" enctype="multipart/form-data" class="search-form">
+            <label for="text_input">Medicine names</label>
+            <textarea id="text_input" name="text_input" placeholder="Search brand, generic, or ingredient names; one per line">{{ medicine_input|default('') }}</textarea>
+            <p class="field-hint">The FDA catalog covers US product listings and is not a complete Indian brand register. Existing project entries are unverified; missing details are identified below.</p>
+            <p class="field-hint">Or upload a prescription image.</p>
+            <div class="input-row upload-row"><input type="file" name="image" accept="image/*"><button type="submit">Analyze medicines <span aria-hidden="true">→</span></button></div>
+        </form>
+        {% if result %}
+        <div class="output-block"><h3>Medicine details</h3>
+            <div class="prediction-grid">
+                {% for med in result %}
+                <article class="result-card"><div class="result-title-row"><h4>{{ med.name }}</h4><span class="badge">{{ med.source }}</span></div>
+                    <p><strong>Brand name:</strong> {{ med.brand_name or "Not separately listed" }}</p>
+                    <p><strong>Generic name:</strong> {{ med.generic_name or "Not available or not verified" }}</p>
+                    <p><strong>Active ingredients:</strong> {{ med.active_ingredients or "Not available or not verified" }}</p>
+                    {% if med.aliases %}<p><strong>Other names recorded by source:</strong> {{ med.aliases|join(", ") }}</p>{% endif %}
+                    <p><strong>Strength:</strong> {{ med.strength or "Not available or not verified" }}</p>
+                    <p><strong>Dosage form:</strong> {{ med.dosage_form or med.type or "Not available or not verified" }}</p>
+                    {% if med.route %}<p><strong>Route:</strong> {{ med.route }}</p>{% endif %}
+                    {% if med.product_type %}<p><strong>FDA listing type:</strong> {{ med.product_type }}</p>{% endif %}
+                    <p><strong>Manufacturer / labeler:</strong> {{ med.manufacturer or "Not available or not verified" }}</p>
+                    <p><strong>Category:</strong> {{ med.category or "Not available or not verified" }}</p>
+                    <p><strong>Common use:</strong> {{ med.usage or "Not available or not verified" }}</p>
+                    {% if med.label_source %}<p><strong>Use / warning source:</strong> {{ med.label_source }}</p>{% endif %}
+                    <p><strong>Dosage information:</strong> {{ med.dosage or "Not available or not verified" }}</p>
+                    <p><strong>Warnings:</strong> {{ med.side_effects or "Not available or not verified" }}</p>
+                    <p class="field-hint">{{ med.verification_status or "Source verification is not recorded." }}</p>
+                </article>
+                {% endfor %}
+            </div>
+            {% if suggestions %}<div class="notice-block"><h4>Name suggestions</h4>{% for suggestion in suggestions %}<p>{{ suggestion }}</p>{% endfor %}</div>{% endif %}
+            {% if interactions %}<div class="notice-block warning-block"><h4>Potential interactions</h4>{% for interaction in interactions %}<p>{{ interaction }}</p>{% endfor %}</div>{% endif %}
+            <p class="medical-note">Medicine information is for reference only. Confirm treatment and dosage with a doctor or pharmacist.</p>
+        </div>
+        {% elif suggestions %}<div class="output-block"><h3>No matching medicine details found</h3>{% for suggestion in suggestions %}<p>{{ suggestion }}</p>{% endfor %}</div>{% endif %}
+    </section>
 
-</div>
+    <section class="tool-panel {% if active_tool != 'hospitals' %}is-hidden{% endif %}" id="panel-hospitals" aria-labelledby="hospitals-heading">
+        <div class="panel-heading"><div><p class="eyebrow">HOSPITAL FINDER</p><h2 id="hospitals-heading">Find care near a location</h2></div><span class="panel-step">03 / 05</span></div>
+        <form action="{{ url_for('hospital_search') }}" method="POST" class="search-form">
+            <label for="location">City, address, or postal code</label>
+            <div class="input-row"><input id="location" type="text" name="location" value="{{ location_query|default('') }}" placeholder="For example: Austin, Texas" required><button type="submit">Search hospitals <span aria-hidden="true">→</span></button></div>
+            <p class="field-hint">Results are listed within about 5 km of the location.</p>
+        </form>
+        {% if hospital_error %}<p class="search-message" role="status">{{ hospital_error }}</p>{% endif %}
+        {% if hospital_results %}<div class="output-block"><h3>Hospitals near {{ location_query }}</h3><div class="hospital-list">
+            {% for hospital in hospital_results %}<article class="hospital-result"><span class="hospital-pin" aria-hidden="true">+</span><div><h4>{{ hospital.name }}</h4><p>{{ hospital.address or "Address not listed" }}</p></div><a href="https://www.google.com/maps/search/?api=1&query={{ hospital.lat }},{{ hospital.lon }}" target="_blank" rel="noopener">Directions <span aria-hidden="true">↗</span></a></article>{% endfor %}
+        </div><p class="field-hint attribution">Hospital data © OpenStreetMap contributors.</p></div>{% endif %}
+    </section>
 
+    <footer class="site-footer"><span>CarePoint</span><span>For urgent or severe symptoms, contact your local emergency services.</span></footer>
+</main>
+<script>
+const toolButtons = document.querySelectorAll("[data-tool]");
+const toolPanels = document.querySelectorAll(".tool-panel");
+
+toolButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        const selectedTool = button.dataset.tool;
+        toolButtons.forEach((item) => {
+            const selected = item === button;
+            item.classList.toggle("selected", selected);
+            item.setAttribute("aria-expanded", String(selected));
+        });
+        toolPanels.forEach((panel) => {
+            panel.classList.toggle("is-hidden", panel.id !== `panel-${selectedTool}`);
+        });
+        document.getElementById(`panel-${selectedTool}`).scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+});
+
+const chatForm = document.getElementById("chatForm");
+const chatInput = document.getElementById("chatInput");
+const chatMessages = document.getElementById("chatMessages");
+const setupForm = document.getElementById("assessmentSetup");
+const welcomeTurn = chatMessages.firstElementChild.cloneNode(true);
+
+function appendChatTurn(role, content, matches = [], urgent = false) {
+    const turn = document.createElement("article");
+    turn.className = `chat-turn ${role}${urgent ? " urgent" : ""}`;
+
+    if (role === "assistant") {
+        const avatar = document.createElement("span");
+        avatar.className = "chat-avatar";
+        avatar.setAttribute("aria-hidden", "true");
+        avatar.textContent = "C";
+        turn.append(avatar);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "chat-bubble";
+    if (urgent) bubble.setAttribute("role", "alert");
+    const paragraph = document.createElement("p");
+    paragraph.textContent = content;
+    bubble.append(paragraph);
+
+    if (matches.length) {
+        const heading = document.createElement("h3");
+        heading.className = "chat-results-heading";
+        heading.textContent = "Local condition and medicine entries (not diagnoses)";
+        bubble.append(heading);
+
+        const list = document.createElement("div");
+        list.className = "chat-condition-list";
+        matches.forEach((match) => {
+            const item = document.createElement("article");
+            item.className = "chat-condition";
+            const condition = document.createElement("h4");
+            condition.textContent = match.condition;
+            const symptoms = document.createElement("p");
+            symptoms.textContent = `Dataset symptoms: ${match.symptoms}`;
+            const medicine = document.createElement("p");
+            medicine.textContent = `Medicine listed: ${match.medicine}`;
+            const use = document.createElement("p");
+            use.textContent = `Reference use: ${match.medicine_use}`;
+            item.append(condition, symptoms, medicine, use);
+            list.append(item);
+        });
+        bubble.append(list);
+    }
+
+    turn.append(bubble);
+    chatMessages.append(turn);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function sendMessage(message) {
+    if (!message.trim() || !setupForm.reportValidity()) return;
+
+    chatMessages.replaceChildren(welcomeTurn.cloneNode(true));
+    appendChatTurn("user", message);
+    chatInput.value = "";
+    chatInput.style.height = "auto";
+    const sendButton = chatForm.querySelector("button");
+    sendButton.disabled = true;
+    chatForm.setAttribute("aria-busy", "true");
+
+    try {
+        const response = await fetch("{{ url_for('symptom_chat') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Unable to process this demo message.");
+        appendChatTurn("assistant", data.reply, data.matches || [], data.urgent);
+    } catch (error) {
+        appendChatTurn("assistant", error.message || "The local symptom matcher is unavailable. Please try again.");
+    } finally {
+        sendButton.disabled = false;
+        chatForm.removeAttribute("aria-busy");
+        chatInput.focus();
+    }
+}
+
+chatForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    sendMessage(chatInput.value.trim());
+});
+
+document.getElementById("newAssessment").addEventListener("click", () => {
+    setupForm.reset();
+    chatMessages.replaceChildren(welcomeTurn.cloneNode(true));
+    chatInput.value = "";
+    chatInput.focus();
+});
+
+chatInput.addEventListener("input", () => {
+    chatInput.style.height = "auto";
+    chatInput.style.height = `${Math.min(chatInput.scrollHeight, 150)}px`;
+});
+</script>
 </body>
 </html>

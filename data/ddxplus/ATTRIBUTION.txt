@@ -1,0 +1,9 @@
+DDXPlus Dataset (English), version 2
+Authors: Arsene Fansi Tchango, Rishab Goel, Zhi Wen, Julien Martel, Joumana Ghosn
+Source: https://doi.org/10.6084/m9.figshare.22687585.v2
+Project: https://github.com/mila-iqia/ddxplus
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+This application uses the DDXPlus evidence and condition metadata files. DDXPlus
+describes synthetic patients and a limited set of 49 pathologies; it is not a
+complete disease catalog or a clinically validated diagnostic tool.

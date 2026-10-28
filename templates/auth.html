@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#176c58">
+    <title>{{ "Create account" if mode == "register" else "Sign in" }} | CarePoint</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="auth-page">
+<main class="page-shell auth-shell">
+    <header class="topbar">
+        <a class="brand" href="{{ url_for('home') }}">
+            <img class="brand-mark-image" src="{{ url_for('static', filename='carepoint-icon.svg') }}" alt="" width="34" height="34">
+            <span>CarePoint</span>
+        </a>
+        <nav class="auth-top-nav" aria-label="Account">
+            {% if mode == "register" %}
+            <span>Already a member?</span><a href="{{ url_for('accounts.login') }}">Sign in</a>
+            {% else %}
+            <span>New to CarePoint?</span><a href="{{ url_for('accounts.register') }}">Create account</a>
+            {% endif %}
+        </nav>
+    </header>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}<div class="flash-list" role="status">{% for category, message in messages %}<p class="flash-message {{ category }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% endwith %}
+    <section class="auth-card">
+        <p class="eyebrow">PRIVATE MEDICINE DASHBOARD</p>
+        <h1>{{ "Create your account" if mode == "register" else "Welcome back" }}</h1>
+        <p class="auth-intro">
+            {{ "Create an account to access your health tools and save your personal medicine reminders and inventory." if mode == "register" else "Sign in to access the symptoms checker, medicines analyzer, nearby hospitals, and your personal medicine tracker." }}
+        </p>
+        {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+        <form method="post" class="account-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            {% if mode == "register" %}
+            <label for="name">Full name</label>
+            <input id="name" name="name" type="text" autocomplete="name" maxlength="100" value="{{ values.name|default('') }}" required>
+            {% endif %}
+            <label for="email">Email address</label>
+            <input id="email" name="email" type="email" autocomplete="email" maxlength="254" value="{{ values.email|default('') }}" required>
+            {% if mode == "register" %}
+            <label for="mobile">Mobile number (international format)</label>
+            <input id="mobile" name="mobile" type="tel" autocomplete="tel" placeholder="+14155552671" pattern="\+[1-9][0-9]{7,14}" value="{{ values.mobile|default('') }}" required>
+            <p class="field-hint">Use your country calling code and digits only, for example +919876543210.</p>
+            {% endif %}
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="{{ 'new-password' if mode == 'register' else 'current-password' }}" minlength="{{ 12 if mode == 'register' else 1 }}" maxlength="128" required>
+            {% if mode == "register" %}
+            <label for="confirm_password">Confirm password</label>
+            <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+            <p class="field-hint">Use 12–128 characters. Passwords are stored as salted hashes.</p>
+            {% endif %}
+            <button class="primary-button" type="submit">{{ "Create account" if mode == "register" else "Sign in" }}</button>
+        </form>
+        <p class="auth-switch">
+            {% if mode == "register" %}Already registered? <a href="{{ url_for('accounts.login') }}">Sign in</a>
+            {% else %}New to CarePoint? <a href="{{ url_for('accounts.register') }}">Create an account</a>{% endif %}
+        </p>
+        <p class="medical-note">Reminder tracking is for personal organization only. Follow your clinician's instructions; the app does not prescribe medicines.</p>
+    </section>
+</main>
+</body>
+</html>

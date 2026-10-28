@@ -1,0 +1,86 @@
+symptoms,disease,medicine,severity
+fever,viral fever,paracetamol,medium
+high fever,viral fever,paracetamol,high
+fever headache,flu,paracetamol,medium
+fever cough,flu,paracetamol,medium
+fever cough headache,flu,paracetamol,medium
+fever chills,malaria,chloroquine,high
+fever chills sweating,malaria,chloroquine,high
+fever rash,dengue,paracetamol,high
+fever joint pain,chikungunya,paracetamol,high
+
+headache,migraine,ibuprofen,medium
+severe headache,migraine,ibuprofen,high
+headache nausea,migraine,ibuprofen,medium
+headache vomiting,migraine,ibuprofen,medium
+
+cough,common cold,cetirizine,low
+dry cough,allergy,loratadine,low
+cough fever,flu,paracetamol,medium
+cough breathlessness,asthma,inhaler,high
+cough chest pain,bronchitis,antibiotics,medium
+
+vomiting,food poisoning,ors,medium
+vomiting nausea,gastritis,antacid,low
+vomiting diarrhea,food poisoning,ors,high
+severe vomiting dehydration,food poisoning,ors,high
+
+diarrhea,food poisoning,ors,medium
+diarrhea vomiting,food poisoning,ors,high
+diarrhea stomach pain,food poisoning,ors,high
+
+stomach pain,gastritis,antacid,low
+burning stomach,gastritis,antacid,low
+stomach pain nausea,gastritis,antacid,low
+severe stomach pain,ulcer,antacid,high
+
+chest pain,heart issue,aspirin,high
+chest pain sweating,heart attack,aspirin,high
+chest pain nausea,heart attack,aspirin,high
+chest pain breathlessness,heart issue,aspirin,high
+
+breathlessness,asthma,inhaler,high
+breathlessness wheezing,asthma,inhaler,high
+
+fatigue,anemia,iron supplements,medium
+fatigue weakness,anemia,iron supplements,medium
+
+frequent urination,diabetes,metformin,high
+frequent urination thirst,diabetes,metformin,high
+
+runny nose,allergy,loratadine,low
+runny nose sneezing,allergy,loratadine,low
+sneezing,allergy,loratadine,low
+
+sore throat,throat infection,amoxicillin,medium
+sore throat fever,throat infection,amoxicillin,medium
+
+blurred vision,eye strain,eye drops,low
+blurred vision headache,eye strain,eye drops,low
+
+headache neck tension,tension headache,paracetamol,low
+headache pressure,tension headache,paracetamol,low
+
+constipation,constipation,fiber supplement,low
+hard stools straining,constipation,fiber supplement,medium
+constipation bloating,constipation,fiber supplement,low
+
+acid reflux,acid reflux,antacid,low
+acid reflux sour taste,acid reflux,antacid,low
+
+menstrual cramps,menstrual cramps,ibuprofen,medium
+menstrual cramps nausea,menstrual cramps,ibuprofen,medium
+
+dehydration,dehydration,ors,medium
+dry mouth dizziness,dehydration,ors,medium
+
+muscle soreness,muscle strain,paracetamol,low
+muscle soreness after exercise,muscle strain,paracetamol,low
+
+itchy circular rash,fungal skin infection,antifungal cream,low
+
+itchy eyes sneezing,seasonal allergies,loratadine,low
+runny nose itchy eyes,seasonal allergies,loratadine,low
+
+sinus pressure runny nose,sinus congestion,saline nasal spray,low
+sinus pressure headache,sinus congestion,saline nasal spray,low

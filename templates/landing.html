@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#176c58">
+    <meta name="description" content="CarePoint brings your everyday health tools together in one place.">
+    <link rel="icon" href="{{ url_for('static', filename='carepoint-icon.svg') }}" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>CarePoint | Your health, in one place</title>
+</head>
+<body data-feature-theme="symptoms">
+<main class="page-shell landing-page">
+    <header class="topbar landing-topbar">
+        <a class="landing-nav-brand" href="{{ url_for('home') }}">
+            <img src="{{ url_for('static', filename='carepoint-icon.svg') }}" alt="" width="34" height="34">
+            <span>CarePoint</span>
+        </a>
+        <nav class="landing-account-nav" aria-label="Account">
+            {% if current_user %}
+            <a href="{{ url_for('tools') }}">Health tools</a>
+            <a href="{{ url_for('accounts.dashboard') }}">Medicine tracker</a>
+            <form action="{{ url_for('accounts.logout') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Sign out</button>
+            </form>
+            {% else %}
+            <a href="{{ url_for('accounts.login', next=url_for('tools')) }}">Sign in</a>
+            <a class="landing-create-account" href="{{ url_for('accounts.register') }}">Create account</a>
+            {% endif %}
+        </nav>
+    </header>
+
+    <section class="landing-hero" aria-labelledby="landing-title">
+        <div class="landing-hero-copy-block">
+            <p class="landing-kicker"><span></span> SMARTER HEALTH, THOUGHTFULLY CONNECTED</p>
+            <h1 id="landing-title">Meet <span>CarePoint</span></h1>
+            <p class="landing-hero-copy">A personal health companion bringing AI-inspired tools and everyday medicine care together in one clear, calm space.</p>
+            <a class="landing-hero-button" href="{{ url_for('tools') if current_user else url_for('accounts.register') }}">{{ "Explore your tools" if current_user else "Discover CarePoint" }} <span aria-hidden="true">→</span></a>
+        </div>
+        <div class="landing-hero-art" role="img" aria-label="Illustration of connected medical and artificial intelligence symbols">
+            <div class="hero-art-grid"></div>
+            <svg class="hero-network" viewBox="0 0 520 390" fill="none" aria-hidden="true">
+                <path d="M75 194 155 116l82 44 77-89 126 78-22 111-100 71-91-46-93 57-59-75Z" stroke="#81D6C1" stroke-width="1.5" stroke-dasharray="5 8"/>
+                <path d="m155 116 6 151m76-107 57 55 18-144m77 191-19-102m69-11-50 113m-176-36 58-11 60 47" stroke="#81D6C1" stroke-width="1.4" opacity=".8"/>
+                <circle cx="75" cy="194" r="8" fill="#6DE0C3"/><circle cx="155" cy="116" r="6" fill="#D9FFF5"/>
+                <circle cx="237" cy="160" r="8" fill="#6DE0C3"/><circle cx="314" cy="71" r="6" fill="#D9FFF5"/>
+                <circle cx="440" cy="149" r="8" fill="#6DE0C3"/><circle cx="418" cy="260" r="6" fill="#D9FFF5"/>
+                <circle cx="318" cy="331" r="8" fill="#6DE0C3"/><circle cx="227" cy="285" r="6" fill="#D9FFF5"/>
+                <circle cx="134" cy="342" r="8" fill="#6DE0C3"/><circle cx="75" cy="267" r="6" fill="#D9FFF5"/>
+            </svg>
+            <div class="hero-orbit orbit-outer"></div>
+            <div class="hero-orbit orbit-inner"></div>
+            <div class="hero-core">
+                <img src="{{ url_for('static', filename='carepoint-icon.svg') }}" alt="" width="88" height="88">
+                <span>CAREPOINT AI</span>
+            </div>
+            <div class="hero-float-card float-health"><span class="float-pulse">✚</span><span>HEALTH<br><strong>IN FOCUS</strong></span></div>
+            <div class="hero-float-card float-data"><span class="float-spark">✳</span><span>SMART<br><strong>INSIGHTS</strong></span></div>
+            <div class="hero-float-card float-care"><span class="float-heart">♡</span><span>PERSONAL<br><strong>CARE</strong></span></div>
+        </div>
+    </section>
+
+    <section class="landing-introduction" aria-labelledby="intro-title">
+        <p class="eyebrow">WELCOME TO CAREPOINT</p>
+        <h2 id="intro-title">Your everyday health tools,<br>all in one place.</h2>
+        <p>CarePoint brings helpful health resources together in a simple, personal space. Explore your options, find useful information, and keep your medicine routine organized when you sign in.</p>
+    </section>
+
+    <section class="landing-features" aria-labelledby="features-title">
+        <div class="landing-section-heading">
+            <div>
+                    <p class="eyebrow">EXPLORE CARETOOLS</p>
+                    <h2 id="features-title">Explore CarePoint</h2>
+            </div>
+                <p>Choose a tool to learn how it can help. Sign in to open it.</p>
+        </div>
+        <div class="landing-feature-grid" role="group" aria-label="CarePoint features">
+                <button class="landing-feature-card is-active" type="button" data-feature="symptoms" aria-pressed="true" aria-controls="feature-detail-symptoms">
+                <span class="landing-feature-icon symptom-icon" aria-hidden="true">✳</span>
+                <span class="landing-feature-title">Symptoms checker</span>
+                    <span class="landing-feature-description">Explore a guided symptom reference.</span>
+                    <span class="landing-feature-link">Learn more <span aria-hidden="true">↓</span></span>
+                </button>
+                <button class="landing-feature-card" type="button" data-feature="medicines" aria-pressed="false" aria-controls="feature-detail-medicines">
+                <span class="landing-feature-icon medicine-icon" aria-hidden="true">＋</span>
+                <span class="landing-feature-title">Medicines analyzer</span>
+                    <span class="landing-feature-description">Review medicine information and possible interactions.</span>
+                    <span class="landing-feature-link">Learn more <span aria-hidden="true">↓</span></span>
+                </button>
+                <button class="landing-feature-card" type="button" data-feature="hospitals" aria-pressed="false" aria-controls="feature-detail-hospitals">
+                <span class="landing-feature-icon hospital-icon" aria-hidden="true">⌖</span>
+                <span class="landing-feature-title">Nearby hospitals</span>
+                    <span class="landing-feature-description">Find hospitals around a location you choose.</span>
+                    <span class="landing-feature-link">Learn more <span aria-hidden="true">↓</span></span>
+                </button>
+                <button class="landing-feature-card" type="button" data-feature="tracker" aria-pressed="false" aria-controls="feature-detail-tracker">
+                <span class="landing-feature-icon tracker-icon" aria-hidden="true">✓</span>
+                <span class="landing-feature-title">Personal medicine tracker</span>
+                    <span class="landing-feature-description">Organize your medicines, reminders, and stock.</span>
+                    <span class="landing-feature-link">Learn more <span aria-hidden="true">↓</span></span>
+                </button>
+                <a class="landing-feature-card landing-doctor-card" href="{{ url_for('doctor_assistance') if current_user else url_for('accounts.login', next=url_for('doctor_assistance')) }}">
+                    <span class="landing-feature-icon doctor-assistance-icon" aria-hidden="true">✚</span>
+                    <span class="landing-feature-title">Doctor Assistance</span>
+                    <span class="landing-feature-description">Choose a specialty and learn with a medical information assistant.</span>
+                    <span class="landing-feature-link">Explore tool <span aria-hidden="true">→</span></span>
+                </a>
+        </div>
+        <div class="landing-feature-details" aria-live="polite">
+                <article class="landing-feature-detail" id="feature-detail-symptoms" data-feature-panel="symptoms">
+                    <div class="detail-illustration symptom-illustration" role="img" aria-label="Illustration of a symptom checklist with a health pulse">
+                        <span class="illustration-orbit"></span><span class="illustration-cross">+</span>
+                        <div class="symptom-sheet"><span class="sheet-heading">HOW ARE YOU FEELING?</span><i></i><i></i><i></i><b>✓</b><span class="pulse-line"></span></div>
+                        <span class="illustration-spark spark-a">✳</span><span class="illustration-spark spark-b">✦</span>
+                    </div>
+                    <div class="detail-copy">
+                        <p class="eyebrow">01 / SYMPTOMS CHECKER</p>
+                        <h3>A starting point for understanding symptoms.</h3>
+                        <p>Describe a symptom scenario and explore related entries from a limited reference dataset. The checker can help you organize what you are noticing, but it does not diagnose conditions or recommend treatment. For personal medical advice, speak with a healthcare professional.</p>
+                        <a class="detail-action" href="{{ url_for('tools') if current_user else url_for('accounts.login', next=url_for('tools')) }}">Open symptoms checker <span aria-hidden="true">→</span></a>
+                    </div>
+                </article>
+                <article class="landing-feature-detail" id="feature-detail-medicines" data-feature-panel="medicines" hidden>
+                    <div class="detail-illustration medicine-illustration" role="img" aria-label="Illustration of medicine capsules and an information card">
+                        <span class="medicine-orbit"></span><div class="medicine-info-card"><span>MEDICINE PROFILE</span><i></i><i></i><i></i><b>DETAILS &amp; WARNINGS</b></div>
+                        <span class="capsule capsule-one"><i></i></span><span class="capsule capsule-two"><i></i></span><span class="medicine-plus">+</span>
+                    </div>
+                    <div class="detail-copy">
+                        <p class="eyebrow">02 / MEDICINES ANALYZER</p>
+                        <h3>Make medicine information easier to review.</h3>
+                        <p>Look up supported medicines by name or review text from a prescription image. CarePoint presents available catalog details and can flag possible interactions in its reference data. Information may be incomplete—always confirm medicines, dosage, and treatment with a doctor or pharmacist.</p>
+                        <a class="detail-action" href="{{ url_for('tools') if current_user else url_for('accounts.login', next=url_for('tools')) }}">Open medicines analyzer <span aria-hidden="true">→</span></a>
+                    </div>
+                </article>
+                <article class="landing-feature-detail" id="feature-detail-hospitals" data-feature-panel="hospitals" hidden>
+                    <div class="detail-illustration hospital-illustration" role="img" aria-label="Illustration of a hospital and map pin">
+                        <span class="map-road road-one"></span><span class="map-road road-two"></span><span class="map-road road-three"></span>
+                        <div class="hospital-building"><b>+</b><i></i><i></i><i></i><i></i></div>
+                        <span class="map-pin"><i>+</i></span><span class="map-dot dot-a"></span><span class="map-dot dot-b"></span>
+                    </div>
+                    <div class="detail-copy">
+                        <p class="eyebrow">03 / NEARBY HOSPITALS</p>
+                        <h3>Find hospital listings around a location.</h3>
+                        <p>Enter a city, address, or postal code to search for hospitals listed nearby and open directions in your map service. Results depend on available map data and may not include every care provider. In an emergency, contact your local emergency services.</p>
+                        <a class="detail-action" href="{{ url_for('tools') if current_user else url_for('accounts.login', next=url_for('tools')) }}">Open hospital finder <span aria-hidden="true">→</span></a>
+                    </div>
+                </article>
+                <article class="landing-feature-detail" id="feature-detail-tracker" data-feature-panel="tracker" hidden>
+                    <div class="detail-illustration tracker-illustration" role="img" aria-label="Illustration of a medicine reminder calendar and tracker">
+                        <span class="tracker-orbit"></span><div class="tracker-board"><div class="tracker-top"><i></i><i></i><i></i><b>MY MEDICINES</b></div><div class="tracker-row"><span>AM</span><i></i><b>✓</b></div><div class="tracker-row"><span>NOON</span><i></i><b>✓</b></div><div class="tracker-row"><span>PM</span><i></i><b>•</b></div></div>
+                        <span class="tracker-pill pill-one"></span><span class="tracker-pill pill-two"></span><span class="tracker-clock">◷</span>
+                    </div>
+                    <div class="detail-copy">
+                        <p class="eyebrow">04 / PERSONAL MEDICINE TRACKER</p>
+                        <h3>Keep your medicine routine organized.</h3>
+                        <p>Save your medicines, record schedules, review reminders, and keep track of tablet inventory in your personal account. Mark doses as taken, skipped, or snoozed to keep your log up to date. The tracker is an organizational aid, not a substitute for your clinician’s instructions.</p>
+                        <a class="detail-action" href="{{ url_for('accounts.dashboard') if current_user else url_for('accounts.login', next=url_for('accounts.dashboard')) }}">Open personal tracker <span aria-hidden="true">→</span></a>
+                    </div>
+                </article>
+        </div>
+    </section>
+
+    <footer class="landing-footer">
+        <a class="landing-footer-brand" href="{{ url_for('home') }}"><img src="{{ url_for('static', filename='carepoint-icon.svg') }}" alt="" width="24" height="24">CarePoint</a>
+        <span>For urgent or severe symptoms, contact your local emergency services.</span>
+    </footer>
+</main>
+<script>
+const featureButtons = document.querySelectorAll("[data-feature]");
+const featurePanels = document.querySelectorAll("[data-feature-panel]");
+
+featureButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+        const selectedFeature = button.dataset.feature;
+        document.body.dataset.featureTheme = selectedFeature;
+        featureButtons.forEach((item) => {
+            const selected = item === button;
+            item.classList.toggle("is-active", selected);
+            item.setAttribute("aria-pressed", String(selected));
+        });
+        featurePanels.forEach((panel) => {
+            panel.hidden = panel.dataset.featurePanel !== selectedFeature;
+        });
+    });
+});
+</script>
+</body>
+</html>

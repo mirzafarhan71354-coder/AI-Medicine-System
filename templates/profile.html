@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#176c58">
+    <title>Profile and notifications | CarePoint</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main class="page-shell account-page">
+    <header class="topbar">
+        <a class="brand" href="{{ url_for('home') }}"><span class="brand-mark">+</span> carepoint</a>
+        <nav class="account-nav" aria-label="Account">
+            <a href="{{ url_for('accounts.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('tools') }}">Health tools</a>
+            <form action="{{ url_for('accounts.logout') }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">Sign out</button></form>
+        </nav>
+    </header>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}<div class="flash-list" role="status">{% for category, message in messages %}<p class="flash-message {{ category }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% endwith %}
+    <section class="dashboard-heading">
+        <p class="eyebrow">YOUR ACCOUNT</p>
+        <h1>Profile &amp; notifications</h1>
+        <p>Keep your contact details and reminder preferences up to date.</p>
+    </section>
+    <div class="dashboard-columns">
+        <section class="dashboard-panel">
+            <h2>Profile details</h2>
+            {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+            <form method="post" class="account-form">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="name">Full name</label>
+                <input id="name" name="name" type="text" maxlength="100" autocomplete="name" value="{{ user.name }}" required>
+                <label for="email">Email address</label>
+                <input id="email" name="email" type="email" maxlength="254" autocomplete="email" value="{{ user.email }}" required>
+                <label for="mobile">Mobile number (international format)</label>
+                <input id="mobile" name="mobile" type="tel" pattern="\+[1-9][0-9]{7,14}" autocomplete="tel" value="{{ user.mobile }}" required>
+                <label for="timezone">Time zone (IANA name)</label>
+                <input id="timezone" name="timezone" type="text" maxlength="64" value="{{ user.timezone }}" placeholder="Asia/Kolkata" required>
+                <p class="field-hint">Reminder times follow this timezone, including daylight-saving changes where applicable.</p>
+                <label class="checkbox-line"><input type="checkbox" name="sms_enabled" {% if user.sms_enabled %}checked{% endif %}> Send scheduled-dose and stock-alert SMS to my registered mobile</label>
+                <div class="sms-setup-status" role="status">
+                    <strong>SMS setup: {{ "server credentials found" if sms_configured else "not configured on this app server" }}</strong>
+                    <span>Your account: {{ "SMS enabled" if user.sms_enabled else "SMS opt-in is off" }} · destination: {{ user.mobile }}</span>
+                    <span>Alerts include scheduled doses, urgent stock at two tablets, and out-of-stock at zero. They are attempted by the separate reminder worker.</span>
+                    {% if last_sms_delivery %}
+                    <span>Latest SMS attempt: {{ last_sms_delivery.status|title }} at {{ last_sms_delivery.created_at }} UTC{% if last_sms_delivery.provider_reference %} · Provider reference {{ last_sms_delivery.provider_reference }}{% endif %}</span>
+                    {% if last_sms_delivery.error_message %}<span class="sms-error">Reason: {{ last_sms_delivery.error_message }}</span>{% endif %}
+                    {% else %}
+                    <span>No SMS delivery attempt is recorded for this account yet.</span>
+                    {% endif %}
+                </div>
+                <p class="field-hint">Twilio accepting a request does not guarantee carrier delivery. Country availability, account verification, sender registration, and sufficient credits may be required.</p>
+                <hr>
+                <h3>Change sign-in details</h3>
+                <label for="current_password">Current password (required to change email, mobile, or password)</label>
+                <input id="current_password" name="current_password" type="password" autocomplete="current-password" maxlength="128">
+                <label for="new_password">New password (optional)</label>
+                <input id="new_password" name="new_password" type="password" autocomplete="new-password" minlength="12" maxlength="128">
+                <label for="confirm_password">Confirm new password</label>
+                <input id="confirm_password" name="confirm_password" type="password" autocomplete="new-password" minlength="12" maxlength="128">
+                <button class="primary-button" type="submit">Save profile</button>
+            </form>
+        </section>
+        <section class="dashboard-panel notification-settings">
+            <h2>Browser notifications</h2>
+            <p>Allow notifications in your browser to receive reminders while this device is available. Browser notifications and service workers require HTTPS (localhost is allowed for development). For reminders when the dashboard is closed, the site also needs server-configured Web Push keys.</p>
+            <button class="secondary-button" id="enableNotifications" type="button" data-vapid-key="{{ vapid_public_key }}">Enable browser reminders</button>
+            <p id="notificationStatus" class="field-hint" role="status" aria-live="polite">
+                {% if push_configured %}Web Push is configured on the server. Allow notifications on this device to subscribe.
+                {% else %}Closed-browser push is not configured. The dashboard can show browser alerts while it remains open.{% endif %}
+            </p>
+            <h3>SMS requirements</h3>
+            <p>SMS is sent only when you opt in and Twilio accepts the request. A queued request is not proof of carrier delivery; provider credentials and paid/verified messaging service may be required.</p>
+            <p>For local development, start <code>py reminder_worker.py</code> in a separate terminal. Set the same three Twilio environment variables in both the Flask app terminal and the worker terminal; restarting only the web app does not start the worker.</p>
+            <h3>Installation</h3>
+            <p>On supported browsers, use the browser menu's “Install app” or “Add to Home Screen” command. Push support differs by browser and operating system.</p>
+        </section>
+    </div>
+    <footer class="site-footer"><a href="{{ url_for('accounts.dashboard') }}">Back to dashboard</a><span>Keep your account password private.</span></footer>
+</main>
+<script>
+const enableButton = document.getElementById("enableNotifications");
+const statusText = document.getElementById("notificationStatus");
+const csrf = {{ csrf_token()|tojson }};
+const vapidPublicKey = enableButton.dataset.vapidKey;
+
+function base64UrlToBytes(value) {
+    const padded = value + "=".repeat((4 - value.length % 4) % 4);
+    return Uint8Array.from(atob(padded.replace(/-/g, "+").replace(/_/g, "/")), (character) => character.charCodeAt(0));
+}
+
+enableButton.addEventListener("click", async () => {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+        statusText.textContent = "This browser does not support web notifications.";
+        return;
+    }
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+            statusText.textContent = "Notification permission was not granted. Change it in your browser's site settings.";
+            return;
+        }
+        const registration = await navigator.serviceWorker.register("{{ url_for('service_worker') }}");
+        if (!vapidPublicKey) {
+            statusText.textContent = "Permission is enabled. Closed-browser push needs server VAPID configuration.";
+            return;
+        }
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: base64UrlToBytes(vapidPublicKey)
+        });
+        const response = await fetch("{{ url_for('accounts.save_push_subscription') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+            body: JSON.stringify({ subscription })
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Unable to save this browser subscription.");
+        localStorage.setItem("carepointPushEnabled", "true");
+        statusText.textContent = result.message;
+    } catch (error) {
+        statusText.textContent = error.message || "Could not enable browser notifications.";
+    }
+});
+
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("{{ url_for('service_worker') }}").catch((error) => {
+        statusText.textContent = `Service worker unavailable: ${error.message}`;
+    });
+}
+</script>
+</body>
+</html>

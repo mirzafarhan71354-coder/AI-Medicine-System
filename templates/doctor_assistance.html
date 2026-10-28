@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#176c58">
+    <meta name="description" content="Ask CarePoint's AI medical information assistant.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Doctor Assistance | CarePoint</title>
+</head>
+<body class="doctor-assistance-page">
+<main class="page-shell doctor-shell">
+    <header class="topbar doctor-topbar">
+        <a class="brand" href="{{ url_for('tools') }}"><span class="brand-mark">+</span> carepoint</a>
+        <nav class="account-nav" aria-label="Account">
+            <a href="{{ url_for('tools') }}">All health tools</a>
+            <a href="{{ url_for('accounts.dashboard') }}">Medicine tracker</a>
+            <span class="account-greeting">{{ current_user.name }}</span>
+        </nav>
+    </header>
+
+    <section class="doctor-intro">
+        <p class="eyebrow">CAREPOINT AI HEALTH ASSISTANT</p>
+        <h1>Doctor Assistance</h1>
+        <p>Choose a medical specialty and an assistant profile to start a private, AI-powered health information chat.</p>
+    </section>
+
+    {% if not ai_configured %}
+    <p class="doctor-configuration-note" role="status">The AI assistant needs server configuration before it can answer. Set CAREPOINT_AI_API_KEY to enable chat. Your other CarePoint tools are unaffected.</p>
+    {% endif %}
+
+    <section class="doctor-selection" id="specialtyStep" aria-labelledby="specialty-heading">
+        <div class="doctor-step-heading">
+            <span class="doctor-step-number">01</span>
+            <div><p class="eyebrow">FIRST, CHOOSE A FIELD</p><h2 id="specialty-heading">Select a medical specialty</h2></div>
+        </div>
+        <div class="specialty-grid">
+            {% for item in specialties %}
+            <button class="specialty-card" type="button" data-specialty="{{ item.name }}">
+                <span class="specialty-icon" aria-hidden="true">{{ ["♡", "✚", "◉", "✿", "⌖", "⌁", "◇", "☺", "✳", "＋"][loop.index0 % 10] }}</span>
+                <span class="specialty-name">{{ item.name }}</span>
+                <span class="specialty-doctor-count">{{ item.doctors|length }} assistant profile{{ "" if item.doctors|length == 1 else "s" }}</span>
+                <span class="specialty-arrow" aria-hidden="true">→</span>
+            </button>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="doctor-selection is-hidden" id="doctorStep" aria-labelledby="doctor-heading" hidden>
+        <button class="doctor-back-link" type="button" id="backToSpecialties">← All specialties</button>
+        <div class="doctor-step-heading">
+            <span class="doctor-step-number">02</span>
+            <div><p class="eyebrow" id="selectedSpecialtyLabel"></p><h2 id="doctor-heading">Choose an assistant profile</h2></div>
+        </div>
+        <div class="doctor-list" id="doctorList"></div>
+        <p class="directory-note">The names and specialties shown here come from the CarePoint directory and are not independently verified. These chat profiles are AI assistants, not the named doctors.</p>
+    </section>
+
+    <section class="doctor-chat-section is-hidden" id="chatStep" aria-labelledby="chatDoctorName" hidden>
+        <button class="doctor-back-link" type="button" id="backToDoctors">← Change doctor</button>
+        <div class="doctor-chat-card">
+            <header class="doctor-chat-header">
+                <div class="doctor-avatar" aria-hidden="true">+</div>
+                <div class="doctor-chat-identity">
+                    <p class="eyebrow">CAREPOINT AI MEDICAL ASSISTANT</p>
+                    <h2 id="chatDoctorName"></h2>
+                    <p id="chatSpecialty"></p>
+                </div>
+                <span class="ai-status"><i></i> AI assistant</span>
+            </header>
+            <p class="doctor-ai-disclosure">You are chatting with AI, not with the named doctor. This tool provides general health information, not diagnosis or treatment. The doctor name is a directory label and does not imply review or endorsement.</p>
+            <div class="doctor-chat-messages" id="doctorMessages" role="log" aria-live="polite" aria-relevant="additions"></div>
+            <form class="doctor-chat-composer" id="doctorChatForm">
+                <label class="sr-only" for="doctorChatInput">Ask a medical question</label>
+                <textarea id="doctorChatInput" rows="2" maxlength="2048" placeholder="Ask a health-related question..." required></textarea>
+                <button type="submit" aria-label="Send message" id="doctorSendButton">Send <span aria-hidden="true">↑</span></button>
+            </form>
+            <p class="doctor-chat-footer">Messages are sent to the configured AI provider to generate responses. Avoid sharing names, contact details, or other identifying information. For emergencies, contact local emergency services.</p>
+        </div>
+    </section>
+</main>
+<script>
+const specialties = {{ specialties|list|tojson }};
+const specialtyStep = document.getElementById("specialtyStep");
+const doctorStep = document.getElementById("doctorStep");
+const chatStep = document.getElementById("chatStep");
+const doctorList = document.getElementById("doctorList");
+const selectedSpecialtyLabel = document.getElementById("selectedSpecialtyLabel");
+const doctorMessages = document.getElementById("doctorMessages");
+const doctorChatForm = document.getElementById("doctorChatForm");
+const doctorChatInput = document.getElementById("doctorChatInput");
+const doctorSendButton = document.getElementById("doctorSendButton");
+let selectedSpecialty = null;
+let selectedDoctor = null;
+let conversation = [];
+
+function showStep(step) {
+    specialtyStep.hidden = step !== "specialty";
+    doctorStep.hidden = step !== "doctor";
+    chatStep.hidden = step !== "chat";
+}
+
+function addMessage(role, text, emergency = false) {
+    const message = document.createElement("article");
+    message.className = `doctor-message ${role}${emergency ? " emergency-message" : ""}`;
+    if (role === "assistant") {
+        const avatar = document.createElement("span");
+        avatar.className = "doctor-message-avatar";
+        avatar.setAttribute("aria-hidden", "true");
+        avatar.textContent = "+";
+        message.append(avatar);
+    }
+    const bubble = document.createElement("div");
+    bubble.className = "doctor-message-bubble";
+    bubble.textContent = text;
+    message.append(bubble);
+    doctorMessages.append(message);
+    doctorMessages.scrollTop = doctorMessages.scrollHeight;
+}
+
+function openDoctorChat(doctor) {
+    selectedDoctor = doctor;
+    conversation = [];
+    doctorMessages.replaceChildren();
+    document.getElementById("chatDoctorName").textContent = doctor.name;
+    document.getElementById("chatSpecialty").textContent = doctor.specialty;
+    addMessage(
+        "assistant",
+        `Hello! I'm CarePoint's AI-powered medical assistant for ${selectedSpecialty.name}, presented under the name ${doctor.name}. I'm an AI assistant, not ${doctor.name} or a substitute for a licensed clinician. How can I help you today?`
+    );
+    showStep("chat");
+    doctorChatInput.focus();
+}
+
+document.querySelectorAll("[data-specialty]").forEach((button) => {
+    button.addEventListener("click", () => {
+        selectedSpecialty = specialties.find((item) => item.name === button.dataset.specialty);
+        if (!selectedSpecialty) return;
+        selectedSpecialtyLabel.textContent = selectedSpecialty.name;
+        doctorList.replaceChildren();
+        selectedSpecialty.doctors.forEach((doctor) => {
+            const button = document.createElement("button");
+            button.className = "doctor-option";
+            button.type = "button";
+            const avatar = document.createElement("span");
+            avatar.className = "doctor-option-avatar";
+            avatar.setAttribute("aria-hidden", "true");
+            avatar.textContent = doctor.name.replace(/^Dr\.\s*/, "").slice(0, 1);
+            const details = document.createElement("span");
+            details.className = "doctor-option-details";
+            const name = document.createElement("strong");
+            name.textContent = doctor.name;
+            const specialty = document.createElement("span");
+            specialty.textContent = doctor.specialty;
+            const action = document.createElement("span");
+            action.className = "doctor-option-arrow";
+            action.setAttribute("aria-hidden", "true");
+            action.textContent = "→";
+            details.append(name, specialty);
+            button.append(avatar, details, action);
+            button.addEventListener("click", () => openDoctorChat(doctor));
+            doctorList.append(button);
+        });
+        showStep("doctor");
+    });
+});
+
+document.getElementById("backToSpecialties").addEventListener("click", () => showStep("specialty"));
+document.getElementById("backToDoctors").addEventListener("click", () => showStep("doctor"));
+
+doctorChatForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const message = doctorChatInput.value.trim();
+    if (!message || !selectedSpecialty || !selectedDoctor) return;
+
+    addMessage("user", message);
+    doctorChatInput.value = "";
+    doctorSendButton.disabled = true;
+    doctorChatForm.setAttribute("aria-busy", "true");
+    const history = [];
+    let historyCharacters = 0;
+    for (const turn of conversation.slice(-12).reverse()) {
+        if (turn.content.length > 3000 || historyCharacters + turn.content.length > 10000) break;
+        history.unshift(turn);
+        historyCharacters += turn.content.length;
+    }
+
+    try {
+        const response = await fetch("{{ url_for('doctor_assistance_chat') }}", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                specialty: selectedSpecialty.name,
+                doctor: selectedDoctor.name,
+                message,
+                history
+            })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "The AI assistant could not reply.");
+        conversation.push({ role: "user", content: message });
+        conversation.push({ role: "assistant", content: data.answer });
+        if (conversation.length > 12) conversation = conversation.slice(-12);
+        addMessage("assistant", data.answer, data.emergency);
+    } catch (error) {
+        addMessage("assistant", error.message || "The AI assistant is temporarily unavailable. Please try again.");
+    } finally {
+        doctorSendButton.disabled = false;
+        doctorChatForm.removeAttribute("aria-busy");
+        doctorChatInput.focus();
+    }
+});
+</script>
+</body>
+</html>

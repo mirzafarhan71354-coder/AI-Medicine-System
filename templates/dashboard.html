@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#176c58">
+    <meta name="description" content="Private medicine reminders and tablet inventory tracker">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="icon" href="{{ url_for('static', filename='carepoint-icon.svg') }}" type="image/svg+xml">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Medicine dashboard | CarePoint</title>
+</head>
+<body>
+{% macro csrf_field() -%}<input type="hidden" name="csrf_token" value="{{ csrf }}">{%- endmacro %}
+{% macro day_checkboxes(selected, prefix) -%}
+<div class="weekday-picker" aria-label="Days of week">
+    {% for value, label in [("0","M"),("1","T"),("2","W"),("3","T"),("4","F"),("5","S"),("6","S")] %}
+    <label title="{{ ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"][loop.index0] }}">
+        <input type="checkbox" name="days_of_week" value="{{ value }}" {% if value in selected %}checked{% endif %}>
+        <span>{{ label }}</span>
+    </label>
+    {% endfor %}
+</div>
+{%- endmacro %}
+<main class="page-shell account-page dashboard-page">
+    <header class="topbar">
+        <a class="brand" href="{{ url_for('home') }}"><span class="brand-mark">+</span> carepoint</a>
+        <nav class="account-nav" aria-label="Account">
+            <a href="{{ url_for('tools') }}">Health tools</a>
+            <a href="{{ url_for('accounts.profile') }}">Profile</a>
+            <span class="account-greeting">{{ user.name }}</span>
+            <form action="{{ url_for('accounts.logout') }}" method="post">{{ csrf_field() }}<button type="submit">Sign out</button></form>
+        </nav>
+    </header>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}<div class="flash-list" role="status">{% for category, message in messages %}<p class="flash-message {{ category }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% endwith %}
+    {% set today_doses = [] %}
+    {% for dose in doses %}{% if dose.scheduled_for[:10] == today %}{% set _ = today_doses.append(dose) %}{% endif %}{% endfor %}
+    {% set stock_alert_count = namespace(value=0) %}
+    {% for medicine in medicines %}{% if medicine.stock_status in ["low", "urgent", "out"] %}{% set stock_alert_count.value = stock_alert_count.value + 1 %}{% endif %}{% endfor %}
+    <section class="dashboard-heading">
+        <div>
+            <p class="eyebrow">PERSONAL MEDICINE TRACKER</p>
+            <h1>Hello, {{ user.name }}</h1>
+            <p>Reminders use {{ user.timezone }}. Confirm a dose before inventory is reduced.</p>
+        </div>
+        <a class="secondary-button dashboard-profile-link" href="{{ url_for('accounts.profile') }}">Profile &amp; notifications</a>
+    </section>
+    <div class="dashboard-stats" aria-label="Medicine inventory summary">
+        <article class="stat-card"><span>Medicines</span><strong>{{ medicines|length }}</strong></article>
+        <article class="stat-card"><span>Doses today</span><strong>{{ today_doses|length }}</strong></article>
+        <article class="stat-card"><span>Stock alerts</span><strong>{{ stock_alert_count.value }}</strong></article>
+    </div>
+
+    <section class="dashboard-panel" id="today-reminders">
+            <div class="section-heading">
+                <div><p class="eyebrow">YOUR SCHEDULE</p><h2>Today's reminders</h2></div>
+                <span class="date-label">{{ today }}</span>
+            </div>
+            {% if today_doses %}
+            <div class="dose-list">
+                {% for dose in today_doses %}
+                <article class="dose-card {{ dose.status }}">
+                    <div class="dose-time"><time>{{ dose.scheduled_for[11:16] }}</time><span>{{ dose.status|replace("_", " ")|title }}</span></div>
+                    <div class="dose-detail">
+                        <h3>{{ dose.medicine_name }}</h3>
+                        <p>{{ dose.instructions }}</p>
+                        <p class="field-hint">{{ dose.tablets_per_dose }} tablet(s) per dose</p>
+                    </div>
+                    {% if dose.status in ["pending", "snoozed"] %}
+                    <div class="dose-actions">
+                        <span class="dose-confirm-hint">Confirm after taking to update tablet stock.</span>
+                        <form method="post" action="{{ url_for('accounts.dose_action', dose_id=dose.id) }}">
+                            {{ csrf_field() }}<input type="hidden" name="action" value="taken">
+                            <button class="small-button taken-button" type="submit">Taken</button>
+                        </form>
+                        <form method="post" action="{{ url_for('accounts.dose_action', dose_id=dose.id) }}">
+                            {{ csrf_field() }}<input type="hidden" name="action" value="snoozed"><input type="hidden" name="snooze_minutes" value="10">
+                            <button class="small-button" type="submit">Snooze 10m</button>
+                        </form>
+                        <form method="post" action="{{ url_for('accounts.dose_action', dose_id=dose.id) }}">
+                            {{ csrf_field() }}<input type="hidden" name="action" value="skipped">
+                            <button class="small-button skip-button" type="submit">Skip</button>
+                        </form>
+                    </div>
+                    {% else %}<p class="dose-recorded">Recorded {{ dose.action_at[:16] if dose.action_at else "" }}</p>{% endif %}
+                </article>
+                {% endfor %}
+            </div>
+            {% else %}<p class="empty-state">No doses scheduled for today. Add a medicine and choose reminder times below.</p>{% endif %}
+    </section>
+
+    <section class="dashboard-panel add-medicine-panel" id="add-medicine">
+        <div class="section-heading">
+            <div><p class="eyebrow">SET UP YOUR PLAN</p><h2>Add medicine and reminders</h2></div>
+        </div>
+        <p class="field-hint">Enter one medicine per line to add several medicines with the same schedule and starting strip quantities.</p>
+        <form method="post" action="{{ url_for('accounts.add_medicines') }}" class="medicine-form">
+            {{ csrf_field() }}
+            <div class="form-grid">
+                <label class="form-field full-width">Medicine name(s)
+                    <textarea name="medicine_names" rows="3" maxlength="1200" placeholder="One medicine per line" required></textarea>
+                </label>
+                <label class="form-field full-width">Saved dosage instructions
+                    <input name="instructions" type="text" maxlength="500" placeholder="For example: Take with water, after food" required>
+                </label>
+                <label class="form-field">Start date<input name="start_date" type="date" value="{{ today }}" required></label>
+                <label class="form-field">End date<input name="end_date" type="date" value="{{ default_end_date }}" required></label>
+                <label class="form-field">Tablets per strip<input name="tablets_per_strip" type="number" min="1" max="100" value="10" required></label>
+                <label class="form-field">Strips available<input name="strips" type="number" min="1" max="100" value="1" required></label>
+                <label class="form-field">Tablets per dose<input name="tablets_per_dose" type="number" min="1" max="100" value="1" required></label>
+                <label class="form-field">Low-stock alert at (tablets)<input name="low_stock_threshold" type="number" min="0" max="1000" value="5" required></label>
+                <fieldset class="form-field full-width">
+                    <legend>Reminder times (choose one or more; use your local time)</legend>
+                    <div class="time-grid">
+                        <label>Reminder time 1<input type="time" name="reminder_times"></label>
+                        <label>Reminder time 2<input type="time" name="reminder_times"></label>
+                        <label>Reminder time 3<input type="time" name="reminder_times"></label>
+                        <label>Reminder time 4<input type="time" name="reminder_times"></label>
+                    </div>
+                    <p class="field-hint">Empty time fields are ignored. No reminder is created unless you enter a time.</p>
+                </fieldset>
+                <fieldset class="form-field full-width">
+                    <legend>Days to take medicine</legend>
+                    {{ day_checkboxes(["0","1","2","3","4","5","6"], "new") }}
+                </fieldset>
+            </div>
+            <p class="field-hint">A reminder alone never changes stock. Inventory changes only after you confirm a dose or mark tablets manually. A maximum of 1,000 tablets is tracked per medicine.</p>
+            <button class="primary-button" type="submit">Save medicine schedule</button>
+        </form>
+    </section>
+
+    <section class="dashboard-panel" id="my-medicines">
+        <div class="section-heading"><div><p class="eyebrow">YOUR INVENTORY</p><h2>My medicines &amp; tablet strips</h2></div></div>
+        {% if medicines %}
+        <div class="medicine-list">
+            {% for medicine in medicines %}
+            <article class="medicine-card {{ medicine.stock_status }}">
+                <div class="medicine-card-header">
+                    <div>
+                        <span class="stock-pill {{ medicine.stock_status }}">{{ {"ok":"In stock","low":"Low stock","urgent":"Urgent","out":"Out of stock"}[medicine.stock_status] }}</span>
+                        <h3>{{ medicine.name }}</h3>
+                        <p>{{ medicine.instructions }}</p>
+                    </div>
+                    <div class="medicine-card-actions">
+                        <div class="inventory-count">
+                            <strong>{{ medicine.tablets_remaining }}</strong>
+                            <span>of {{ medicine.total_capacity }} tablets left</span>
+                        </div>
+                        <button class="small-button edit-medicine-button" type="button" data-open-details="medicine-management-{{ medicine.id }}">Edit medicine</button>
+                        {% if medicine.tablets_remaining == 0 %}
+                        <form method="post" action="{{ url_for('accounts.delete_medicine', medicine_id=medicine.id) }}" onsubmit="return confirm('Delete {{ medicine.name|e }} and its inventory, reminders, and history? This cannot be undone.');">
+                            {{ csrf_field() }}<button class="small-button skip-button" type="submit">Delete empty medicine</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="inventory-progress" role="progressbar" aria-label="{{ medicine.name }} tablets consumed" aria-valuemin="0" aria-valuemax="{{ medicine.total_capacity }}" aria-valuenow="{{ medicine.tablets_consumed }}">
+                    <span style="width: {{ ((medicine.tablets_consumed / medicine.total_capacity) * 100)|round|int if medicine.total_capacity else 0 }}%"></span>
+                </div>
+                <div class="inventory-summary">
+                    <span>{{ medicine.tablets_consumed }} consumed · {{ medicine.tablets_remaining }} tablets across {{ medicine.strips_remaining }} strip(s) with stock</span>
+                    <span>
+                        {% if medicine.estimated_days_remaining is not none %}
+                            Estimated run-out: {{ medicine.estimated_runout_date }}
+                            {% if medicine.estimated_days_remaining == 0 %}(today){% else %}(about {{ medicine.estimated_days_remaining }} day(s)){% endif %}
+                        {% else %}Run-out estimate unavailable{% endif %}
+                    </span>
+                </div>
+                {% if medicine.stock_status != "ok" %}
+                <p class="stock-warning">
+                    {% if medicine.stock_status == "out" %}This medicine is out of tracked stock.
+                    {% elif medicine.stock_status == "urgent" %}Only {{ medicine.tablets_remaining }} tablet(s) remain.
+                    {% else %}Remaining stock is at or below your alert threshold of {{ medicine.low_stock_threshold }}.{% endif %}
+                </p>
+                {% endif %}
+
+                <h4 class="strip-heading">Digital blister strips <span>Tap a tablet to correct its tracked state</span></h4>
+                {% for strip in medicine.tablet_rows|batch(medicine.tablets_per_strip) %}
+                <div class="blister-strip" role="group" aria-label="{{ medicine.name }} strip {{ loop.index }}">
+                    <div class="tablet-row">
+                        {% for tablet in strip if tablet %}
+                        <form method="post" action="{{ url_for('accounts.set_tablet_status', tablet_id=tablet.id) }}">
+                            {{ csrf_field() }}
+                            {% if tablet.consumed_at %}
+                            <input type="hidden" name="state" value="available">
+                            <button class="tablet consumed" type="submit" aria-label="Tablet {{ tablet.tablet_number }} consumed; click to mark available" title="Consumed — click to correct">
+                                <span aria-hidden="true"></span>
+                            </button>
+                            {% else %}
+                            <input type="hidden" name="state" value="consumed">
+                            <button class="tablet available" type="submit" aria-label="Tablet {{ tablet.tablet_number }} available; click to mark consumed" title="Available — click to mark consumed">
+                                <span aria-hidden="true"></span>
+                            </button>
+                            {% endif %}
+                        </form>
+                        {% endfor %}
+                    </div>
+                    <span class="strip-caption">Strip {{ loop.index }}</span>
+                </div>
+                {% endfor %}
+                {% if medicine.total_capacity == 0 %}<p class="empty-state">No tablets have been added to this digital strip.</p>{% endif %}
+
+                <details class="medicine-management" id="medicine-management-{{ medicine.id }}">
+                    <summary>Edit {{ medicine.name }} details, reminders, or stock</summary>
+                    <div class="management-grid">
+                        <form method="post" action="{{ url_for('accounts.edit_medicine', medicine_id=medicine.id) }}" class="account-form compact-form">
+                            {{ csrf_field() }}<h4>Medicine details</h4>
+                            <label>Medicine name<input name="name" value="{{ medicine.name }}" maxlength="120" required></label>
+                            <label>Dosage instructions<input name="instructions" value="{{ medicine.instructions }}" maxlength="500" required></label>
+                            <label>Start date<input type="date" name="start_date" value="{{ medicine.start_date }}" required></label>
+                            <label>End date<input type="date" name="end_date" value="{{ medicine.end_date }}" required></label>
+                            <label>Tablets per dose<input type="number" name="tablets_per_dose" min="1" max="{{ [100, medicine.total_capacity]|min }}" value="{{ medicine.tablets_per_dose }}" required></label>
+                            <label>Low-stock threshold<input type="number" name="low_stock_threshold" min="0" max="1000" value="{{ medicine.low_stock_threshold }}" required></label>
+                            <button class="secondary-button" type="submit">Save details</button>
+                        </form>
+                        <form method="post" action="{{ url_for('accounts.refill_medicine', medicine_id=medicine.id) }}" class="account-form compact-form">
+                            {{ csrf_field() }}<h4>Add stock</h4>
+                            <label>Additional strips<input name="strips" type="number" min="1" max="100" value="1" required></label>
+                            <p class="field-hint">Adds {{ medicine.tablets_per_strip }} tablets per strip. Existing consumed tablets remain in history.</p>
+                            <button class="secondary-button" type="submit">Add strips</button>
+                        </form>
+                    </div>
+                    {% for schedule in medicine.schedules %}
+                    <div class="schedule-editor">
+                        <form method="post" action="{{ url_for('accounts.edit_schedule', schedule_id=schedule.id) }}" class="schedule-edit-form">
+                            {{ csrf_field() }}
+                            <label>Time<input type="time" name="time_local" value="{{ schedule.time_local }}" required></label>
+                            {{ day_checkboxes(schedule.days_of_week.split(","), "edit") }}
+                            <button class="secondary-button small-button" type="submit">Save reminder</button>
+                        </form>
+                        <form method="post" action="{{ url_for('accounts.toggle_schedule', schedule_id=schedule.id) }}">
+                            {{ csrf_field() }}<input type="hidden" name="enabled" value="{{ 0 if schedule.enabled else 1 }}">
+                            <button class="small-button" type="submit">{{ "Pause" if schedule.enabled else "Resume" }}</button>
+                        </form>
+                        <form method="post" action="{{ url_for('accounts.delete_schedule', schedule_id=schedule.id) }}" onsubmit="return confirm('Delete this reminder and its dose history?');">
+                            {{ csrf_field() }}<button class="small-button skip-button" type="submit">Delete reminder</button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                    <form method="post" action="{{ url_for('accounts.add_schedule', medicine_id=medicine.id) }}" class="schedule-editor">
+                        {{ csrf_field() }}
+                        <label>Add reminder time<input type="time" name="time_local" required></label>
+                        {{ day_checkboxes(["0","1","2","3","4","5","6"], "add") }}
+                        <button class="secondary-button small-button" type="submit">Add reminder</button>
+                    </form>
+                    <form method="post" action="{{ url_for('accounts.delete_medicine', medicine_id=medicine.id) }}" class="delete-medicine-form" onsubmit="return confirm('Delete this medicine, inventory, reminders, and history? This cannot be undone.');">
+                        {{ csrf_field() }}<button class="text-danger" type="submit">Delete medicine and history</button>
+                    </form>
+                </details>
+            </article>
+            {% endfor %}
+        </div>
+        {% else %}<p class="empty-state">No medicines saved yet. Add one above to create your first reminder and digital strip.</p>{% endif %}
+        <p class="medical-note">Digital blister strips are a tracking aid only and do not represent a physical medicine product. Inventory estimates follow your saved schedule and may not reflect actual use.</p>
+    </section>
+
+    <section class="dashboard-panel" id="medicine-history">
+        <div class="section-heading"><div><p class="eyebrow">ACTIVITY</p><h2>Medicine history &amp; alerts</h2></div></div>
+        <h3>Recent dose history</h3>
+        {% if dose_history %}
+        <ul class="notification-history dose-history">
+            {% for item in dose_history %}
+            <li class="history-{{ item.status }}">
+                <time>{{ item.scheduled_for[:10] }} · {{ item.scheduled_for[11:16] }}</time>
+                <p><strong>{{ item.medicine_name }}</strong> — {{ item.status|title }}{% if item.action_at %} at {{ item.action_at[:16] }} UTC{% endif %}</p>
+                <span>{{ item.instructions }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}<p class="empty-state">Taken and skipped doses will be recorded here.</p>{% endif %}
+        <h3>Recent reminders &amp; stock alerts</h3>
+        {% if notifications %}
+        <ul class="notification-history">
+            {% for notification in notifications %}
+            <li class="{{ notification.event_type }}">
+                <time>{{ notification.created_at }}</time>
+                <p>{{ notification.message }}</p>
+                {% if notification.delivery_status %}
+                <span class="field-hint">Delivery status (channel:status): {{ notification.delivery_status }}. An SMS marked accepted was accepted by Twilio; that does not confirm carrier delivery.</span>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}<p class="empty-state">Dose reminders and low-stock alerts will appear here.</p>{% endif %}
+        <p class="field-hint">For reliable closed-browser reminders, keep the backend reminder worker running. Browser push and SMS each require additional setup.</p>
+    </section>
+    <footer class="site-footer"><a href="{{ url_for('accounts.profile') }}">Notification settings &amp; profile</a><span>For personal tracking only; not a substitute for clinical advice.</span></footer>
+</main>
+<script>
+const serviceWorkerUrl = "{{ url_for('service_worker') }}";
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register(serviceWorkerUrl).catch((error) => {
+        console.error("CarePoint service worker registration failed:", error);
+    });
+}
+document.querySelectorAll("[data-open-details]").forEach((button) => {
+    button.addEventListener("click", () => {
+        const details = document.getElementById(button.dataset.openDetails);
+        if (!details) return;
+        details.open = true;
+        details.scrollIntoView({ behavior: "smooth", block: "center" });
+        details.querySelector("summary").focus();
+    });
+});
+
+const knownNotifications = new Set(
+    JSON.parse(localStorage.getItem("carepointNotificationIds") || "[]")
+);
+async function checkInPageNotifications() {
+    if (localStorage.getItem("carepointPushEnabled") === "true") return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    try {
+        const response = await fetch("{{ url_for('accounts.notification_feed') }}", {
+            headers: { "Accept": "application/json" },
+            cache: "no-store"
+        });
+        if (!response.ok) return;
+        const notifications = await response.json();
+        for (const item of notifications) {
+            if (knownNotifications.has(item.id)) continue;
+            knownNotifications.add(item.id);
+            new Notification("CarePoint medicine reminder", { body: item.message, tag: `carepoint-${item.id}` });
+        }
+        localStorage.setItem("carepointNotificationIds", JSON.stringify([...knownNotifications].slice(-100)));
+    } catch (error) {
+        console.error("Could not refresh CarePoint notifications:", error);
+    }
+}
+checkInPageNotifications();
+window.setInterval(checkInPageNotifications, 60000);
+</script>
+</body>
+</html>

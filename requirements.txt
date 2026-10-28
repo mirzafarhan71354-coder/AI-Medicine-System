@@ -3,3 +3,5 @@ requests
 pytesseract
 Pillow
 gunicorn
+pywebpush
+tzdata
